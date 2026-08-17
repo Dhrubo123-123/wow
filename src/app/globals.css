@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------------------------
+ * ASCEND design tokens
+ * Mobile-first RPG aesthetic: dark base, violet/gold accents, high-contrast
+ * status colors for XP / quests / achievements.
+ * ---------------------------------------------------------------------- */
+:root {
+  --background: #0b0b12;
+  --surface: #14141f;
+  --surface-raised: #1b1b2a;
+  --border: #2a2a3d;
+  --foreground: #f4f4f8;
+  --muted: #9a9ab0;
+
+  --primary: #8b5cf6; /* violet-500 */
+  --primary-foreground: #ffffff;
+  --accent: #f5b83d; /* xp gold */
+  --accent-foreground: #1a1200;
+
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #38bdf8;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ASCEND ships dark-first; a light theme is a later enhancement, not MVP. */
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Respect reduced-motion preferences everywhere (Phase 15 level-up etc.) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utility for content that must sit above the safe-area / bottom nav */
+.pb-safe {
+  padding-bottom: calc(var(--safe-bottom) + 1rem);
+}
