@@ -2,6 +2,21 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 5 — Quest data model
+
+- Added `lib/quests/types.ts`: `Quest`/`QuestAttempt`/`QuestEvidence`
+  row types (derived from the Phase 2 DB types), `QuestDifficulty`
+  (1-5) with labels, and `QuestGenerationInput` — the shape the AI
+  provider must produce in Phase 6/14, kept next to the domain model so
+  the two can't silently drift apart.
+- Added `lib/quests/transitions.ts`: the quest lifecycle
+  (`available → accepted → in_progress → submitted → under_review →
+  completed/failed`) and quest-attempt lifecycle
+  (`in_progress → submitted → completed/failed`) as an explicit
+  transition graph, plus `USER_SETTABLE_QUEST_STATUSES` mirroring the
+  RLS check constraint from Phase 2's migration. Sanity-checked the
+  graph logic (legal transitions pass, illegal skips/reversals rejected).
+
 ## Phase 4 — XP engine
 
 - Added `lib/progression/levels.ts`: deterministic `calculateXPForLevel`,
