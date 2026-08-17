@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Turn your real life into quests.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0b0b12",
-    theme_color: "#0b0b12",
+    background_color: "#05061a",
+    theme_color: "#05061a",
     icons: [],
   };
 }

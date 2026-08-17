@@ -7,7 +7,9 @@ export default function LandingPage() {
       <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
         <Badge variant="accent">AI-Powered Real-Life RPG</Badge>
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">ASCEND</h1>
+          <h1 className="text-gradient-primary text-5xl font-extrabold tracking-tight">
+            ASCEND
+          </h1>
           <p className="text-muted">Turn Your Real Life Into Quests.</p>
         </div>
         <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted">
@@ -22,14 +24,14 @@ export default function LandingPage() {
         </ol>
       </div>
       <div className="space-y-3 pb-safe">
-        <Link href="/onboarding" className="block">
+        <Link href="/signup" className="block">
           <Button fullWidth size="lg">
             Start Your Ascent
           </Button>
         </Link>
-        <Link href="/dashboard" className="block">
+        <Link href="/login" className="block">
           <Button fullWidth size="lg" variant="secondary">
-            View Demo Dashboard
+            Log In
           </Button>
         </Link>
       </div>

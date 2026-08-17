@@ -44,8 +44,14 @@ See [`.env.example`](./.env.example). `CEREBRAS_API_KEY` and
 `SUPABASE_SERVICE_ROLE_KEY` are **server-only** — never referenced from
 client components, never prefixed with `NEXT_PUBLIC_`, never committed.
 
+## Requirements
+
+Node 20 works today, but `@supabase/supabase-js` now targets Node 22+ and
+prints an `engines` warning on install/build. Not yet a hard blocker — plan
+to upgrade the dev/deploy Node version before it becomes one.
+
 ## Project status
 
-Currently in **Phase 1 — Foundation**. See [CHANGELOG.md](./CHANGELOG.md) for
-phase-by-phase progress and [ARCHITECTURE.md](./ARCHITECTURE.md) for what's
-built vs. planned.
+Phase 0-2 complete (foundation, mobile shell, Supabase auth/schema/RLS).
+See [CHANGELOG.md](./CHANGELOG.md) for phase-by-phase progress and
+[ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.

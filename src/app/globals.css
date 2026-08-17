@@ -2,26 +2,34 @@
 
 /* -------------------------------------------------------------------------
  * ASCEND design tokens
- * Mobile-first RPG aesthetic: dark base, violet/gold accents, high-contrast
- * status colors for XP / quests / achievements.
+ * Deep indigo-navy base (trust, focus) + an electric blue→violet gradient
+ * for primary actions (the "magical" glow) + gold for XP/reward moments,
+ * which reads as reward across cultures regardless of the rest of the
+ * palette. High-contrast status colors for quests/achievements.
  * ---------------------------------------------------------------------- */
 :root {
-  --background: #0b0b12;
-  --surface: #14141f;
-  --surface-raised: #1b1b2a;
-  --border: #2a2a3d;
-  --foreground: #f4f4f8;
-  --muted: #9a9ab0;
+  --background: #05061a;
+  --surface: #0d1030;
+  --surface-raised: #161a45;
+  --border: #2a2f6b;
+  --foreground: #f3f5ff;
+  --muted: #9ea3d6;
 
-  --primary: #8b5cf6; /* violet-500 */
+  --primary: #6d5bff; /* electric indigo */
+  --primary-2: #22d3ee; /* cyan, gradient partner for primary */
   --primary-foreground: #ffffff;
-  --accent: #f5b83d; /* xp gold */
-  --accent-foreground: #1a1200;
+  --accent: #ffc531; /* xp gold */
+  --accent-foreground: #211200;
 
-  --success: #22c55e;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --info: #38bdf8;
+  --success: #2ee6a6;
+  --danger: #ff5470;
+  --warning: #ffb84d;
+  --info: #4fc3ff;
+
+  --gradient-primary: linear-gradient(135deg, #6d5bff 0%, #22d3ee 100%);
+  --gradient-accent: linear-gradient(135deg, #ffc531 0%, #ff8a3d 100%);
+  --glow-primary: 0 0 24px -4px rgba(109, 91, 255, 0.55);
+  --glow-accent: 0 0 24px -4px rgba(255, 197, 49, 0.5);
 
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
@@ -43,6 +51,7 @@
   --color-muted: var(--muted);
 
   --color-primary: var(--primary);
+  --color-primary-2: var(--primary-2);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
@@ -72,11 +81,37 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(ellipse 600px 400px at 15% -10%, rgba(109, 91, 255, 0.25), transparent),
+    radial-gradient(ellipse 500px 400px at 100% 0%, rgba(34, 211, 238, 0.15), transparent),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+
+/* Gradient primary surface — buttons, key CTAs, level-up moments */
+.bg-gradient-primary {
+  background-image: var(--gradient-primary);
+}
+.bg-gradient-accent {
+  background-image: var(--gradient-accent);
+}
+.glow-primary {
+  box-shadow: var(--glow-primary);
+}
+.glow-accent {
+  box-shadow: var(--glow-accent);
+}
+
+/* Gradient text for hero moments (app name, level-up headline) */
+.text-gradient-primary {
+  background-image: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 /* Respect reduced-motion preferences everywhere (Phase 15 level-up etc.) */
