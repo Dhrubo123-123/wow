@@ -2,6 +2,46 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 4 — XP engine
+
+- Added `lib/progression/levels.ts`: deterministic `calculateXPForLevel`,
+  `calculateTotalXPForLevel`, `calculateLevel`, `calculateProgress`,
+  `xpForNextLevel` — no AI, no randomness. Curve: level N needs
+  `100 + (N-1)*50` XP over the previous level.
+- Added `lib/progression/xp.ts`: `awardXP()` writes an immutable
+  `xp_transactions` ledger row before updating the `profiles.xp/level`
+  cache — never overwrites XP without recording the event, per the
+  brief. Verified against the live DB via a temporary dev-only API route
+  (removed after verification): 0→120 XP correctly produced level 1→2.
+- Added `lib/progression/skills.ts` (`updateSkillXP`, mastery level from
+  skill-specific XP) and `lib/progression/achievements.ts`
+  (`unlockAchievement`, idempotent via the DB's unique constraint —
+  a 23505 conflict is treated as "already granted", not an error).
+- All three DB-writing modules are `server-only` and take an admin
+  (service-role) client — they bypass RLS, which is intentional per
+  Phase 2's "xp_transactions has no user insert policy" design.
+
+## Phase 3 — Profile/Onboarding
+
+- Built `/onboarding`: real form (name, preferred language, occupation,
+  primary objective, first goal, timeframe, skill level) that creates a
+  `goals` row and updates the caller's `profiles` row (name, language,
+  occupation, primary_objective, current_goal_id,
+  onboarding_completed_at) via the browser Supabase client — RLS's
+  `auth.uid() = user_id`/`= id` policies allow this without any
+  server-side code. Skips straight to `/dashboard` if onboarding is
+  already complete.
+- Fixed a gap where a confirmed user logging in without having finished
+  onboarding landed on the dashboard placeholder instead of
+  `/onboarding` — `/login` now checks `profiles.onboarding_completed_at`
+  after sign-in and redirects accordingly.
+- `/profile` now renders real data: name, avatar (initials fallback),
+  level badge, XP progress bar (via the new progression lib), occupation
+  and language badges, streak count, and the current goal — redirects to
+  `/onboarding` if it isn't finished yet.
+- Verified end-to-end in-browser: signup → confirm → login → onboarding
+  form submit → dashboard → profile showing the submitted data.
+
 ## Phase 2 — Supabase (auth, schema, RLS)
 
 - Created the `ascend-production` Supabase project (Asia-Pacific/Tokyo),

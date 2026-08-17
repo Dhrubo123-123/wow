@@ -52,6 +52,7 @@ to upgrade the dev/deploy Node version before it becomes one.
 
 ## Project status
 
-Phase 0-2 complete (foundation, mobile shell, Supabase auth/schema/RLS).
-See [CHANGELOG.md](./CHANGELOG.md) for phase-by-phase progress and
-[ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.
+Phase 0-4 complete (foundation, mobile shell, Supabase auth/schema/RLS,
+onboarding/profile, XP engine). See [CHANGELOG.md](./CHANGELOG.md) for
+phase-by-phase progress and [ARCHITECTURE.md](./ARCHITECTURE.md) for what's
+built vs. planned.

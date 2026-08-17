@@ -22,19 +22,27 @@ function LoginForm() {
     setError(null);
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: signInData, error: signInError } =
+      await supabase.auth.signInWithPassword({ email, password });
 
-    setLoading(false);
-
-    if (signInError) {
+    if (signInError || !signInData.user) {
+      setLoading(false);
       setError("Incorrect email or password.");
       return;
     }
 
-    router.push(next);
+    // A confirmed user who never finished onboarding must finish it
+    // before anywhere else — checked here rather than in proxy.ts to
+    // keep the edge session-refresh path free of a DB round trip.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", signInData.user.id)
+      .single();
+
+    setLoading(false);
+
+    router.push(profile?.onboarding_completed_at ? next : "/onboarding");
     router.refresh();
   }
 
