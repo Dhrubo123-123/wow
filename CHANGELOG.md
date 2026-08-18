@@ -2,6 +2,28 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 9 — Quest experience
+
+- Added `/quests` (list, grouped by status priority) and `/quests/[id]`
+  (detail: description, objective, instructions, success criteria, and
+  the lifecycle action for the quest's current status).
+- Added `QuestActions`: drives the user-controllable part of the
+  lifecycle (`available → accepted → in_progress → submitted`) directly
+  against Supabase with the browser client — RLS's
+  `USER_SETTABLE_QUEST_STATUSES` (Phase 5) is what actually enforces
+  this is safe, the component just matches it. Starting a quest creates
+  a `quest_attempts` row; submitting inserts `quest_evidence` and closes
+  out the attempt. Anything past `submitted` (evaluation, completed/
+  failed) is server-only — Phase 14, not here.
+- Evidence capture is text-only for now, with an honest inline note
+  ("photo/file/url evidence lands in Phase 10/13") rather than a capture
+  UI that doesn't work yet.
+- Dashboard's "Start Quest" CTA now deep-links to the specific quest.
+- Verified live end-to-end: accepted → started → submitted a real
+  AI-generated quest ("Walk-Jog Intervals"), confirmed in the DB that
+  `quest_attempts.status = 'submitted'` and the evidence text landed
+  correctly in `quest_evidence`.
+
 ## Phase 8 — Dashboard
 
 - `/dashboard` now renders real data: greeting, avatar with level badge,

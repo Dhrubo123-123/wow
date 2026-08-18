@@ -113,7 +113,7 @@ export default async function DashboardPage() {
                   <Badge>{currentQuest.estimated_minutes} min</Badge>
                 </div>
               </div>
-              <Link href="/quests" className="block">
+              <Link href={`/quests/${currentQuest.id}`} className="block">
                 <Button fullWidth>Start Quest</Button>
               </Link>
             </>
