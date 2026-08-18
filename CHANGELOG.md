@@ -2,6 +2,25 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 11 — Motion/Orientation
+
+- Added `OrientationSensor` and `MotionSensor`
+  (`components/sensors/`) — `DeviceOrientationEvent`/`DeviceMotionEvent`
+  directly, never the Generic Sensor API. SSR-safe feature detection via
+  `useSensorSupport` (same `useSyncExternalStore` fix as Phase 10's
+  camera, applied proactively this time instead of hitting the bug again).
+- iOS 13+'s `requestPermission()` is only called from a real click; every
+  other browser has no such gate, so `enable()` just starts listening —
+  matches the brief's "do not assume Generic Sensor API is available"
+  and "request permission only after a button click".
+- States rendered: Motion supported / Motion unavailable / Permission
+  denied / (permission-required, before the click).
+- Verified in-browser: both render their unsupported-vs-supported branch
+  correctly with no hydration error, and clicking "Enable" on this
+  no-requestPermission desktop browser correctly grants immediately and
+  shows "Motion supported" (no live values, since there's no real sensor
+  in this sandboxed environment — expected, same caveat as Phase 10).
+
 ## Phase 10 — Camera
 
 - Added `CameraCapture` (`components/camera/CameraCapture.tsx`): feature

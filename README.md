@@ -52,9 +52,10 @@ to upgrade the dev/deploy Node version before it becomes one.
 
 ## Project status
 
-Phase 0-10 complete (foundation, mobile shell, Supabase auth/schema/RLS,
+Phase 0-11 complete (foundation, mobile shell, Supabase auth/schema/RLS,
 onboarding/profile, XP engine, quest data model, AI provider, goal
-decomposition, dashboard, quest experience, camera). See
+decomposition, dashboard, quest experience, camera, motion/orientation).
+See
 [CHANGELOG.md](./CHANGELOG.md) for phase-by-phase progress and
 [ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.
 
