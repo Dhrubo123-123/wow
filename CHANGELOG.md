@@ -2,6 +2,33 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 15 — Level-up UX
+
+- Added `lib/audio/sound.ts`: generative Web Audio API effects
+  (`playFanfare`, `playChime`, `playClap`) and browser-native
+  `speak()` via `SpeechSynthesisUtterance` — no licensed music/voice
+  assets exist to source here, so this is real synthesized audio
+  instead of a fake "plays music" claim. Every function takes an
+  explicit `enabled` flag; nothing plays unless the caller passes `true`.
+- Added `useSoundPreference()` (`lib/audio/`) reading/writing
+  `app_settings.sound_enabled`, and `SoundToggle` on `/profile` — the
+  single opt-in switch gating every sound/voice moment app-wide, off by
+  default per the brief.
+- Added `Confetti` (pure CSS/JS burst, no library) and
+  `CelebrationOverlay` — shared by level-up (this phase) and
+  achievements (Phase 17): confetti, fanfare/chime, spoken line,
+  `navigator.vibrate` pattern, and an `aria-live="assertive"`
+  announcement that fires regardless of the sound setting (that's
+  accessibility, not "sound"). Confetti is skipped entirely under
+  `prefers-reduced-motion`, not just slowed down.
+- Added `GlobalCelebrationListener`, mounted once in `AppShell`,
+  listening for `ascend:levelup`/`ascend:achievement` window events —
+  keeps Phase 14's `QuestActions` decoupled from celebration UI/audio
+  code; it just dispatches an event and moves on.
+- Verified live: dispatching `ascend:levelup` renders the full overlay
+  correctly (confetti particles, gradient "Level 3" headline, "New
+  quests unlocked" subtitle, dismiss hint), no console errors.
+
 ## Phase 14 — AI evaluation (closes the core loop)
 
 - Added `POST /api/quests/[id]/evaluate`: `submitted → under_review` →

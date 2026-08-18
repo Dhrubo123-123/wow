@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { BottomNavigation } from "@/components/ui";
 import { HomeIcon, QuestIcon, SkillIcon, MentorIcon, ProfileIcon } from "@/components/icons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GlobalCelebrationListener } from "@/components/celebration/GlobalCelebrationListener";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: HomeIcon },
@@ -34,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
       {showNav && <BottomNavigation items={NAV_ITEMS} />}
+      {showNav && <GlobalCelebrationListener />}
     </div>
   );
 }

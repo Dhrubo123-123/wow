@@ -12,6 +12,7 @@ import {
   ProgressBar,
 } from "@/components/ui";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { SoundToggle } from "@/components/settings/SoundToggle";
 import { xpForNextLevel } from "@/lib/progression/levels";
 
 export default async function ProfilePage() {
@@ -106,6 +107,8 @@ export default async function ProfilePage() {
           </p>
         </CardContent>
       </Card>
+
+      <SoundToggle />
 
       <Link
         href="/settings/device-access"
