@@ -6,6 +6,7 @@ import { MockAIProvider } from "./providers/mock";
 
 export * from "./types";
 export * from "./schemas";
+export * from "./mentorContext";
 
 let cached: AIProvider | null = null;
 

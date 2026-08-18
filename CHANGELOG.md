@@ -2,6 +2,23 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 18 — AI Mentor
+
+- Added `lib/ai/mentorContext.ts`'s `buildMentorContext()`: a genuinely
+  compact context builder (brief §26: "Do NOT send the entire database
+  blindly") — name/level/XP, current goal title, up to 5 recent quest
+  titles and 3 recent failures, up to 3 recent achievement names. No
+  descriptions, instructions, evidence, or other users' data.
+- Added `POST /api/mentor`: runs entirely under the caller's own
+  RLS-scoped session — `ai_messages` already has insert/select-own
+  policies (Phase 2), so no admin/service-role client is needed here.
+- Added `/mentor` (chat history + input) and `MentorChat`.
+- Verified live: asked "What should I focus on next to reach my goal?"
+  and got a real, structured, goal-aware answer (correctly referenced
+  "your 5K goal in 60 days" with a genuine three-pillar training plan)
+  — not templated boilerplate. Confirmed both turns persisted correctly
+  in `ai_messages`.
+
 ## Phase 17 — Achievements
 
 - Added `supabase/migrations/0005_seed_achievements.sql`: FIRST_QUEST,
