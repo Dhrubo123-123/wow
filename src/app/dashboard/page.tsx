@@ -143,10 +143,13 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle>Skills &amp; achievements</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted">
-            Skill tree lands in Phase 16, achievements in Phase 17.
-          </p>
+        <CardContent className="space-y-1">
+          <Link href="/skills" className="block text-sm text-primary hover:underline">
+            View skill tree →
+          </Link>
+          <Link href="/achievements" className="block text-sm text-primary hover:underline">
+            View achievements →
+          </Link>
         </CardContent>
       </Card>
     </div>

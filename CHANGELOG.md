@@ -2,6 +2,23 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 20 — Mobile QA
+
+- Swept all five required widths (360/375/390/412/430) across dashboard,
+  quests, skills, achievements, mentor, profile, and device-access
+  settings: `scrollWidth === clientWidth` everywhere (no horizontal
+  scroll), confirmed visually at both extremes (360 and 430).
+- Found and fixed a real staleness bug while sweeping: the dashboard's
+  "Skills & achievements" card still said "lands in Phase 16/17" even
+  though both were built two phases ago — now links to `/skills` and
+  `/achievements` like the profile page already did.
+- `Modal` (Phase 1) remains unused by any feature — celebrations use the
+  purpose-built `CelebrationOverlay` instead — so there's no live dialog
+  to visually QA; its bottom-sheet-on-mobile layout
+  (`max-h-[85vh] overflow-y-auto`) was already built dialog-safe.
+- Forms (onboarding, evidence submission, mentor chat) were already
+  exercised live in earlier phases at mobile viewport sizes.
+
 ## Phase 19 — PWA
 
 - Generated real PWA icons with Pillow (no SVG rasterizer available in
