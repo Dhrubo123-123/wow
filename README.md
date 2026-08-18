@@ -52,13 +52,13 @@ to upgrade the dev/deploy Node version before it becomes one.
 
 ## Project status
 
-Phase 0-15 complete (foundation, mobile shell, Supabase auth/schema/RLS,
+Phase 0-16 complete (foundation, mobile shell, Supabase auth/schema/RLS,
 onboarding/profile, XP engine, quest data model, AI provider, goal
 decomposition, dashboard, quest experience, camera, motion/orientation,
-device permissions, evidence storage, AI evaluation, level-up UX). The
-full core loop (goal → AI quest → evidence → AI evaluation → XP → level
-up → next quest) works end-to-end against the live Groq API and
-Supabase project. See
+device permissions, evidence storage, AI evaluation, level-up UX, skill
+tree). The full core loop (goal → AI quest → evidence → AI evaluation →
+XP → level up → skill unlock → next quest) works end-to-end against the
+live Groq API and Supabase project. See
 [CHANGELOG.md](./CHANGELOG.md) for phase-by-phase progress and
 [ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.
 

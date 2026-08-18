@@ -101,10 +101,11 @@ export default async function ProfilePage() {
         <CardHeader>
           <CardTitle>Skills &amp; achievements</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted">
-            Skill tree lands in Phase 16, achievements in Phase 17.
-          </p>
+        <CardContent className="space-y-1">
+          <Link href="/skills" className="block text-sm text-primary hover:underline">
+            View skill tree →
+          </Link>
+          <p className="text-xs text-muted">Achievements land in Phase 17.</p>
         </CardContent>
       </Card>
 

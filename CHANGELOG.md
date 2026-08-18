@@ -2,6 +2,30 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 16 — Skill tree
+
+- Added `supabase/migrations/0003_seed_skills.sql` (6 general skills:
+  Execution, Consistency, Research, Communication, Focus, Creativity)
+  and `0004_seed_skills_expand.sql` (Endurance, Strength, Flexibility,
+  Learning, Financial Literacy — added after live testing showed the
+  first batch was entirely soft-skill oriented and missed fitness/
+  learning/money goal domains). Requirements are config data
+  (`{"mastery_xp": 1000}` per skill), not hardcoded into the UI.
+- Added `/skills`: renders every row from the `skills` table with
+  locked/unlocked/mastery-N state from `user_skills`, driven entirely by
+  the DB.
+- Added `lib/quests/matchSkillId()`: loose case-insensitive match of the
+  AI's free-text `skill` field against the skills catalog, wired into
+  both quest-generation call sites (`/api/goals/plan`,
+  `/api/quests/[id]/evaluate`'s next-quest step) — closes a real gap
+  where `quests.skill_id` was always `null`, silently preventing the
+  skill tree from ever populating.
+- Verified live: re-triggered goal-plan generation after seeding
+  Endurance and confirmed a new "Daily Brisk Walk" quest correctly
+  matched `skill_id` to it. A sibling quest's AI-chosen skill name
+  didn't fuzzy-match anything — expected best-effort behavior, not
+  every AI wording will map to the (necessarily finite) catalog.
+
 ## Phase 15 — Level-up UX
 
 - Added `lib/audio/sound.ts`: generative Web Audio API effects

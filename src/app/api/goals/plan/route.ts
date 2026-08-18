@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAIProvider, AIProviderError } from "@/lib/ai";
+import { matchSkillId } from "@/lib/quests";
 import type { Json } from "@/lib/supabase/types";
 
 const RequestSchema = z.object({
@@ -103,25 +104,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const questRows = plan.initial_quests.map((q) => ({
-    user_id: user.id,
-    goal_id: goal.id,
-    // skill_id intentionally left null: the skills config table isn't
-    // seeded yet (Phase 16). q.skill (a plain string name) is folded
-    // into the description below so it isn't silently dropped.
-    title: q.title,
-    description: `${q.description}\n\nSkill focus: ${q.skill}`,
-    objective: q.objective,
-    difficulty: q.difficulty,
-    estimated_minutes: q.estimated_minutes,
-    xp_reward: Math.min(q.xp_reward, MAX_INITIAL_QUEST_XP),
-    evidence_required: q.evidence_required,
-    evidence_type: q.evidence_type,
-    success_criteria: q.success_criteria as Json,
-    instructions: q.instructions as Json,
-    status: "available" as const,
-    ai_raw_response: plan as unknown as Json,
-  }));
+  const questRows = await Promise.all(
+    plan.initial_quests.map(async (q) => ({
+      user_id: user.id,
+      goal_id: goal.id,
+      // Loose name match against the Phase 16 skills table — falls back
+      // to null (unattributed) rather than failing the whole request.
+      skill_id: await matchSkillId(admin, q.skill),
+      title: q.title,
+      description: `${q.description}\n\nSkill focus: ${q.skill}`,
+      objective: q.objective,
+      difficulty: q.difficulty,
+      estimated_minutes: q.estimated_minutes,
+      xp_reward: Math.min(q.xp_reward, MAX_INITIAL_QUEST_XP),
+      evidence_required: q.evidence_required,
+      evidence_type: q.evidence_type,
+      success_criteria: q.success_criteria as Json,
+      instructions: q.instructions as Json,
+      status: "available" as const,
+      ai_raw_response: plan as unknown as Json,
+    })),
+  );
 
   const { data: insertedQuests, error: insertError } = await admin
     .from("quests")

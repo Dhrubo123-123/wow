@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/progression";
+import { matchSkillId } from "@/lib/quests";
 import type { Json } from "@/lib/supabase/types";
 
 // Server-enforced ceilings — the AI's proposal is never trusted outright
@@ -175,6 +176,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         await admin.from("quests").insert({
           user_id: user.id,
           goal_id: quest.goal_id,
+          skill_id: await matchSkillId(admin, nextQuest.skill),
           title: nextQuest.title,
           description: `${nextQuest.description}\n\nSkill focus: ${nextQuest.skill}`,
           objective: nextQuest.objective,
