@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/progression";
 import { matchSkillId } from "@/lib/quests";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { Json } from "@/lib/supabase/types";
 
 // Server-enforced ceilings — the AI's proposal is never trusted outright
@@ -29,6 +30,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
   const userId: string = user.id; // captured once — see grant() below for why
+
+  // Evaluation awards real XP — 10/minute is far more than a genuine
+  // submit-and-wait workflow needs, tight enough to block abuse.
+  const rate = checkRateLimit("quest-evaluate", userId, 10, 60);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again in a moment." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
 
   // RLS scopes this to the caller's own quest.
   const { data: quest, error: questError } = await supabase

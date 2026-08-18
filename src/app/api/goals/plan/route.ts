@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { matchSkillId } from "@/lib/quests";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { Json } from "@/lib/supabase/types";
 
 const RequestSchema = z.object({
@@ -42,6 +43,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+
+  // Goal planning generates real quest rows — 5/minute is plenty for a
+  // real user re-planning, tight enough to block a retry-loop script.
+  const rate = checkRateLimit("goals-plan", user.id, 5, 60);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again in a moment." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
   }
 
   // RLS (auth.uid() = user_id) guarantees this can only fetch the

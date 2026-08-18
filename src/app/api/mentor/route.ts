@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAIProvider, AIProviderError, buildMentorContext } from "@/lib/ai";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { Json } from "@/lib/supabase/types";
 
 const RequestSchema = z.object({
@@ -34,6 +35,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+
+  // 10 questions/minute is generous for a real user, tight enough to
+  // stop a script from burning through the AI provider's quota.
+  const rate = checkRateLimit("mentor", user.id, 10, 60);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Ask me one at a time — try again in a few seconds." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
   }
 
   const context = await buildMentorContext(supabase, user.id, parsed.data.question);

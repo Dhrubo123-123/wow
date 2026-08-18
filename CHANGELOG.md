@@ -2,6 +2,34 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 21 — Security audit
+
+- Secret scan: `git grep` for API key/token/service-role patterns across
+  all tracked files — clean. Confirmed `.env.local` stays untracked
+  (only `.env.example`, all-empty placeholders, is committed).
+- **Found and fixed a real bug**: every unauthenticated `/api/*` request
+  was getting a `307` HTML redirect to `/login` instead of a clean
+  `401` JSON — `proxy.ts`'s blanket auth redirect didn't distinguish
+  API routes from pages. A `fetch()` caller following that redirect
+  would try to parse the login page's HTML as JSON and fail silently
+  into a generic error. Fixed: API routes now bypass the redirect
+  entirely and rely on each handler's own `if (!user) return 401`
+  (every route already had one). Verified live: all three AI-backed
+  routes now return real `401`s unauthenticated, and `400`s on
+  malformed input (bad UUID, invalid JSON body).
+- Added `lib/rateLimit.ts`: in-memory sliding-window limiter, applied to
+  `/api/mentor` (10/min), `/api/goals/plan` (5/min), and
+  `/api/quests/[id]/evaluate` (10/min) — the three routes that call a
+  metered AI API and/or award real XP. Documented its known limitation
+  (per-process, not shared across serverless instances) rather than
+  overstating what it guarantees.
+- Upload validation (MIME/size) already enforced at the Storage layer
+  itself (Phase 13's bucket config), not just client-side — re-confirmed
+  rather than re-tested.
+- RLS cross-user isolation was exercised implicitly throughout every
+  phase's live verification (every query is scoped through the caller's
+  own session) rather than re-tested in a dedicated pass here.
+
 ## Phase 20 — Mobile QA
 
 - Swept all five required widths (360/375/390/412/430) across dashboard,

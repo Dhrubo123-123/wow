@@ -57,6 +57,16 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // API routes must never get an HTML redirect on missing auth — a
+  // `fetch()` caller would follow it to the login page and choke trying
+  // to parse HTML as JSON (found live in Phase 21's security audit:
+  // every /api/* route was returning 307 instead of 401). Every route
+  // handler already does its own `if (!user) return 401` check, so it's
+  // safe to just let these through unredirected.
+  if (pathname.startsWith("/api/")) {
+    return response;
+  }
+
   if (!user && !isPublicPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
