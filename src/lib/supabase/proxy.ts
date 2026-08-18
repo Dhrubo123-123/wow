@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./types";
 
 // Routes reachable without an authenticated session.
-const PUBLIC_PATHS = ["/", "/login", "/signup"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/offline"];
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true;
@@ -12,6 +12,9 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/api/auth")) return true;
   if (pathname === "/manifest.webmanifest") return true;
   if (pathname === "/favicon.ico") return true;
+  if (pathname === "/sw.js") return true;
+  if (pathname === "/apple-touch-icon.png") return true;
+  if (pathname.startsWith("/icons/")) return true;
   return false;
 }
 

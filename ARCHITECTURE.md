@@ -170,3 +170,16 @@ retry needed).
 present (Cerebras preferred, per the brief). **To switch back once
 Cerebras is funded:** change `AI_PROVIDER=groq` to `AI_PROVIDER=cerebras`
 (or delete the line) in `.env.local` — no code change required.
+
+## 11. PWA icons — generated, not placeholder
+
+*(Recorded 2026-08-18.)* No SVG rasterizer was available in this
+environment (`sips` accepted SVG input silently but never produced
+output; no `rsvg-convert`/`inkscape`/ImageMagick installed) — Python's
+Pillow was, so `public/icons/*.png` and `public/apple-touch-icon.png`
+were generated directly with `ImageDraw` (gradient background matching
+`--gradient-primary`, centered bold "A" glyph, maskable variant with a
+safe-zone-sized glyph and no rounded corners since the OS applies its
+own mask). Real files, not 1×1 placeholders — verified the browser
+actually renders `icon-512.png` as a 512×512 image and the manifest
+resolves correctly.

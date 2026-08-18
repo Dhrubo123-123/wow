@@ -2,6 +2,30 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 19 — PWA
+
+- Generated real PWA icons with Pillow (no SVG rasterizer available in
+  this environment — see ARCHITECTURE.md §11): `icon-192.png`,
+  `icon-512.png`, a maskable variant, and a 180×180 apple-touch-icon.
+  Gradient background matches the app's `--gradient-primary` token.
+- `manifest.ts` now references the real icons (`any` + `maskable`
+  purposes) and adds `scope`/`orientation`; root layout's metadata
+  references the same icon set for browser tabs and iOS home-screen.
+- Added `public/sw.js`: a hand-written service worker (no Workbox/
+  next-pwa dependency) — network-first for navigations with an offline
+  fallback shell (`/offline`), cache-first only for content-hashed
+  static assets. Deliberately not offline-first: quests/AI evaluation
+  need the network regardless, so caching dynamic pages would just
+  serve stale data.
+- Added `PWAProvider`: registers the service worker and shows a custom
+  "Install ASCEND" banner via `beforeinstallprompt` where supported
+  (Chrome/Android/desktop — iOS Safari never fires this event; there,
+  Add to Home Screen is manual via the share sheet, which no web API
+  can trigger). Dismissal is remembered per-device.
+- Verified live: manifest resolves with the real icon URLs, an icon
+  actually renders as a 512×512 image in-browser, and the service
+  worker registers and activates (`getRegistrations()` confirmed).
+
 ## Phase 18 — AI Mentor
 
 - Added `lib/ai/mentorContext.ts`'s `buildMentorContext()`: a genuinely
