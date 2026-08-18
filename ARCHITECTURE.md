@@ -142,3 +142,31 @@ See [CHANGELOG.md](./CHANGELOG.md) for the authoritative, dated log.
 Phase order follows the master build brief (Phase 0 → Phase 26); phases are
 not skipped, and each must pass tests/lint/typecheck/build before the next
 begins.
+
+## 10. AI provider — Cerebras billing block, Groq fallback
+
+*(Recorded 2026-08-17.)* The brief mandates Cerebras `gpt-oss-120b`. The
+account provisioned for this project (`Vapi Demo`, org
+`org_95ckx6cevtnrfx94h55vtmr6`) returns `402 payment_required` on **every**
+model — including free-tier Preview ones — because it has no payment
+method on file (`$0.00` balance, Pay-As-You-Go, no active subscription).
+This is an account-activation gate, not a quota/credits issue: adding a
+card is required before any API call succeeds, confirmed at
+`cloud.cerebras.ai/platform/{org}/billing`.
+
+`lib/ai/providers/openai-compatible.ts` holds the shared implementation
+(request plumbing, retry-once-then-controlled-error schema validation, all
+five `AIProvider` methods) for any Chat-Completions-shaped provider.
+`CerebrasProvider` and `GroqProvider` are both ~10-line subclasses of it.
+Groq hosts the identical `openai/gpt-oss-120b` model on its own
+infrastructure, free tier, no card required — so `AI_PROVIDER=groq` in
+`.env.local` is a temporary infra swap with **no model-quality tradeoff**,
+not a spec deviation. Verified live: real quest generation and evaluation
+both returned schema-valid, high-quality output on the first attempt (no
+retry needed).
+
+`lib/ai/index.ts`'s `getAIProvider()` reads `AI_PROVIDER` (`"cerebras" |
+"groq" | "mock"`) to pick explicitly, or falls back to whichever key is
+present (Cerebras preferred, per the brief). **To switch back once
+Cerebras is funded:** change `AI_PROVIDER=groq` to `AI_PROVIDER=cerebras`
+(or delete the line) in `.env.local` — no code change required.

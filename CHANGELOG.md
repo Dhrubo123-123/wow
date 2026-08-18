@@ -2,6 +2,32 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 6 — AI provider
+
+- Added `lib/ai/schemas.ts`: Zod schemas for the four AI JSON contracts
+  (`QuestGenerationSchema`, `AIEvaluationSchema`, `GoalPlanSchema`,
+  `MentorResponseSchema`, `DifficultyAdjustmentSchema`), matching brief
+  §14/§23 exactly.
+- Added `lib/ai/types.ts`: the `AIProvider` interface (`generateQuest`,
+  `evaluateQuest`, `generateGoalPlan`, `generateMentorResponse`,
+  `adjustDifficulty`) and `AIProviderError` — the controlled error type
+  for Phase 24's "GAME MASTER TEMPORARILY UNAVAILABLE" messaging.
+- Added `lib/ai/providers/openai-compatible.ts`: shared implementation
+  (request plumbing + retry-once-then-controlled-error schema
+  validation) for any Chat-Completions-shaped provider — Cerebras and
+  Groq are both thin subclasses, avoiding duplicated AI logic.
+- Added `CerebrasProvider`, `GroqProvider` (temporary fallback — see
+  ARCHITECTURE.md §10), and `MockAIProvider` (deterministic, no network,
+  for local dev/Phase 23 tests).
+- Added `lib/ai/index.ts`'s `getAIProvider()` factory, selectable via
+  `AI_PROVIDER` env var.
+- **Cerebras account is blocked** (402 payment_required on every model,
+  even free ones — no payment method on file). Verified real AI calls
+  end-to-end via Groq hosting the identical `openai/gpt-oss-120b` model:
+  quest generation and evidence evaluation both returned schema-valid,
+  high-quality output on the first attempt. Full details and the
+  one-line switch-back instructions are in ARCHITECTURE.md §10.
+
 ## Phase 5 — Quest data model
 
 - Added `lib/quests/types.ts`: `Quest`/`QuestAttempt`/`QuestEvidence`
