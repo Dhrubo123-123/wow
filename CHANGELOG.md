@@ -2,6 +2,30 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 10 — Camera
+
+- Added `CameraCapture` (`components/camera/CameraCapture.tsx`): feature
+  detection via `useSyncExternalStore` (not a naive `typeof navigator`
+  check — that caused a real hydration mismatch, since `navigator` is
+  undefined during SSR; fixed by giving React explicit server/client
+  snapshots), camera requested only after an explicit "Enable Camera"
+  tap, front/back flip when `enumerateDevices` reports >1 camera,
+  preview → capture → retake/confirm, and explicit error states for
+  denied permission, no camera found, and generic failures.
+- Every path that ends the stream (unmount, retake, cancel, confirm)
+  calls `stopStream()` — the camera must never stay on after leaving.
+- Verified in-browser: idle state renders (no hydration error after the
+  fix — confirmed clean before/after), and triggering `getUserMedia` in
+  this camera-less sandboxed environment correctly hits the
+  `NotFoundError` branch end-to-end. Full permission-grant and live
+  preview testing needs real device hardware — that's Phase 20's job.
+- Not yet wired into quest evidence submission (Phase 9's `QuestActions`
+  still text-only) — captured photos have nowhere durable to go until
+  Supabase Storage exists (Phase 13). Wiring it in now would mean either
+  storing raw image data in a text column or silently dropping it on
+  refresh, neither of which is better than the current honest
+  "text-for-now" state.
+
 ## Phase 9 — Quest experience
 
 - Added `/quests` (list, grouped by status priority) and `/quests/[id]`
