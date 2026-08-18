@@ -2,6 +2,16 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 12 — Device permissions
+
+- Added `/settings/device-access`: shows camera/microphone/motion/
+  location/notifications state, with a per-row "Check" button that
+  performs the real browser check (Permissions API where available,
+  otherwise an actual request/getUserMedia probe) and upserts the result
+  to `device_permissions` — never bypasses or spoofs what the browser
+  actually reports.
+- Linked from `/profile`.
+
 ## Phase 11 — Motion/Orientation
 
 - Added `OrientationSensor` and `MotionSensor`

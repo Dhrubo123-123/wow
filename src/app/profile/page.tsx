@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -105,6 +106,13 @@ export default async function ProfilePage() {
           </p>
         </CardContent>
       </Card>
+
+      <Link
+        href="/settings/device-access"
+        className="block text-center text-sm text-muted hover:text-foreground"
+      >
+        Device Access Settings
+      </Link>
 
       <LogoutButton fullWidth />
     </div>
