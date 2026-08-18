@@ -2,6 +2,31 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 17 — Achievements
+
+- Added `supabase/migrations/0005_seed_achievements.sql`: FIRST_QUEST,
+  FIRST_WIN, STREAK_3, STREAK_7, LEVEL_5, LEVEL_10. The brief's
+  FIRST_CLIENT/FIRST_REVENUE/FIRST_PRODUCT are intentionally not
+  seeded — they need goal-category classification and client/revenue/
+  product event detection from evidence, neither of which exists; dead
+  config nobody could ever unlock isn't better than not seeding it.
+- Wired deterministic granting into `/api/quests/[id]/evaluate`: a
+  `grant(key)` helper calls the Phase 2-idempotent `unlockAchievement`
+  unconditionally at each qualifying point (submission, pass, streak
+  threshold, level threshold) — the DB's unique constraint is what
+  makes "only once" actually true, not application logic guessing
+  whether it's the first time.
+- Added `/achievements`, DB-driven like `/skills`.
+- The evaluate response now includes `newAchievements`; `QuestActions`
+  dispatches staggered `ascend:achievement` events (5.5s apart) so a
+  level-up and an achievement earned in the same evaluation queue
+  instead of one celebration overlay instantly replacing the other.
+- Verified live: submitted evidence for "Run/Walk Intervals" (evaluation
+  correctly failed it — 1-minute intervals against a 2-minute
+  requirement), and the response included `FIRST_QUEST` in
+  `newAchievements`. Confirmed on `/achievements`: "First Quest" shows
+  Unlocked with today's date, everything else correctly Locked.
+
 ## Phase 16 — Skill tree
 
 - Added `supabase/migrations/0003_seed_skills.sql` (6 general skills:

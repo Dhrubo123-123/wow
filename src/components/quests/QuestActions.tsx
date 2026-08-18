@@ -166,10 +166,25 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
           description: result.feedback,
           variant: result.passed ? "success" : "warning",
         });
+        // Stagger level-up + achievement celebrations so they queue
+        // one after another instead of one immediately replacing the
+        // other (CelebrationOverlay shows a single moment at a time).
+        let delay = 0;
         if (result.leveledUp) {
           window.dispatchEvent(
             new CustomEvent("ascend:levelup", { detail: { newLevel: result.newLevel } }),
           );
+          delay += 5500;
+        }
+        for (const achievement of result.newAchievements ?? []) {
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("ascend:achievement", {
+                detail: { name: achievement.name, description: achievement.description },
+              }),
+            );
+          }, delay);
+          delay += 5500;
         }
       }
     } catch {

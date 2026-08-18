@@ -105,7 +105,9 @@ export default async function ProfilePage() {
           <Link href="/skills" className="block text-sm text-primary hover:underline">
             View skill tree →
           </Link>
-          <p className="text-xs text-muted">Achievements land in Phase 17.</p>
+          <Link href="/achievements" className="block text-sm text-primary hover:underline">
+            View achievements →
+          </Link>
         </CardContent>
       </Card>
 

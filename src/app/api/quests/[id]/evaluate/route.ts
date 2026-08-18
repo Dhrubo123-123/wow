@@ -28,6 +28,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (!user) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+  const userId: string = user.id; // captured once — see grant() below for why
 
   // RLS scopes this to the caller's own quest.
   const { data: quest, error: questError } = await supabase
@@ -107,7 +108,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const { error: evalInsertError } = await admin.from("ai_evaluations").insert({
     quest_attempt_id: attempt.id,
-    user_id: user.id,
+    user_id: userId,
     passed: evaluation.passed,
     score: evaluation.score,
     feedback: evaluation.feedback,
@@ -136,11 +137,30 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   let leveledUp = false;
   let newLevel: number | null = null;
   let streak: { currentStreak: number; longestStreak: number } | null = null;
+  const newAchievements: { key: string; name: string; description: string | null }[] = [];
+
+  // unlockAchievement is idempotent (Phase 2's unique(user_id,
+  // achievement_id) constraint), so it's safe to call unconditionally on
+  // every qualifying evaluation — it only actually grants once.
+  async function grant(key: string) {
+    const { data: achievement } = await admin
+      .from("achievements")
+      .select("id, name, description")
+      .eq("key", key)
+      .maybeSingle();
+    const result = await unlockAchievement(admin, { userId, achievementKey: key });
+    if (result.granted && achievement) {
+      newAchievements.push({ key, name: achievement.name, description: achievement.description });
+    }
+  }
+
+  // Submitting for review — pass or fail — still counts as "first quest".
+  await grant("FIRST_QUEST");
 
   if (evaluation.passed) {
     if (clampedXp > 0) {
       const xpResult = await awardXP(admin, {
-        userId: user.id,
+        userId: userId,
         amount: clampedXp,
         sourceType: "quest_evaluation",
         sourceId: quest.id,
@@ -148,17 +168,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       });
       leveledUp = xpResult.leveledUp;
       newLevel = xpResult.newLevel;
+
+      if (newLevel >= 5) await grant("LEVEL_5");
+      if (newLevel >= 10) await grant("LEVEL_10");
     }
 
     if (quest.skill_id && clampedSkillXp > 0) {
-      await updateSkillXP(admin, { userId: user.id, skillId: quest.skill_id, amount: clampedSkillXp });
+      await updateSkillXP(admin, { userId: userId, skillId: quest.skill_id, amount: clampedSkillXp });
     }
 
-    streak = await updateStreak(admin, user.id);
+    streak = await updateStreak(admin, userId);
+    if (streak.currentStreak >= 3) await grant("STREAK_3");
+    if (streak.currentStreak >= 7) await grant("STREAK_7");
 
-    // Config-table-driven — see lib/progression/achievements.ts. No-ops
-    // safely until Phase 17 seeds the `achievements` table.
-    await unlockAchievement(admin, { userId: user.id, achievementKey: "FIRST_QUEST" });
+    await grant("FIRST_WIN");
 
     // Best-effort: generate the next quest for this goal so the core
     // loop (§1: ... XP -> LEVEL UP -> SKILL UNLOCK -> NEXT QUEST)
@@ -174,7 +197,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
           recentQuestTitles: [quest.title],
         });
         await admin.from("quests").insert({
-          user_id: user.id,
+          user_id: userId,
           goal_id: quest.goal_id,
           skill_id: await matchSkillId(admin, nextQuest.skill),
           title: nextQuest.title,
@@ -206,5 +229,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     leveledUp,
     newLevel,
     streak,
+    newAchievements,
   });
 }
