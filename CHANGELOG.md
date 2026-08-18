@@ -2,6 +2,33 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 14 — AI evaluation (closes the core loop)
+
+- Added `POST /api/quests/[id]/evaluate`: `submitted → under_review` →
+  `evaluateQuest()` → `ai_evaluations` row → `completed`/`failed` →
+  (if passed) `awardXP` → `updateSkillXP` → `updateStreak` →
+  `unlockAchievement("FIRST_QUEST")` → best-effort next-quest generation
+  for the same goal. On an `AIProviderError`, rolls the quest back to
+  `submitted` (never strands it in `under_review`) and returns the
+  Phase 24 "GAME MASTER TEMPORARILY UNAVAILABLE" copy.
+- Server independently clamps `xp_awarded` to `[0, quest.xp_reward]` and
+  `skill_xp_awarded` to `[0, 100]` — the AI's proposal is never trusted
+  outright (brief §14/§22). Verified this matters: XP is only ever
+  granted inside the `passed` branch, so a failed evaluation's proposed
+  XP never reaches the profile even though it's recorded on the
+  `ai_evaluations` row for audit purposes.
+- Added `lib/progression/streaks.ts`: deterministic day-gap streak math
+  (same day → no-op, +1 day → continues, bigger gap → resets to 1).
+- Wired into `QuestActions`: submission immediately triggers evaluation
+  (no separate background job) and shows the real pass/fail feedback via
+  toast; a level-up dispatches an `ascend:levelup` window event for
+  Phase 15's celebration UI to listen for.
+- Verified live against a real quest: the AI correctly **failed** a
+  submission that only described one mobility session against a 5-day
+  success criterion (score 20, specific feedback identifying the gap) —
+  proving both real evaluation intelligence and that the XP-clamping
+  gate holds on the harder, more failure-prone path.
+
 ## Phase 13 — Evidence storage
 
 - Added `supabase/migrations/0002_storage.sql`: private `quest-evidence`

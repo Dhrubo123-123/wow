@@ -52,10 +52,12 @@ to upgrade the dev/deploy Node version before it becomes one.
 
 ## Project status
 
-Phase 0-13 complete (foundation, mobile shell, Supabase auth/schema/RLS,
+Phase 0-14 complete (foundation, mobile shell, Supabase auth/schema/RLS,
 onboarding/profile, XP engine, quest data model, AI provider, goal
 decomposition, dashboard, quest experience, camera, motion/orientation,
-device permissions, evidence storage). See
+device permissions, evidence storage, AI evaluation). The full core loop
+(goal → AI quest → evidence → AI evaluation → XP → next quest) works
+end-to-end against the live Cerebras/Groq API and Supabase project. See
 [CHANGELOG.md](./CHANGELOG.md) for phase-by-phase progress and
 [ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.
 

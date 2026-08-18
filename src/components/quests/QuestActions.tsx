@@ -139,14 +139,48 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
       .update({ status: "submitted" })
       .eq("id", questId);
 
-    setLoading(false);
-
     if (attemptError || questError) {
+      setLoading(false);
       setError("Something went wrong. Please try again.");
       return;
     }
 
-    toast({ title: "Submitted!", description: "Your evidence is awaiting review." });
+    toast({ title: "Submitted!", description: "The Game Master is reviewing your evidence…" });
+
+    // Phase 14: evaluate immediately rather than leaving the user
+    // waiting on a background job — this is what actually closes the
+    // GOAL -> QUEST -> ... -> XP -> LEVEL UP loop from §1 of the brief.
+    try {
+      const res = await fetch(`/api/quests/${questId}/evaluate`, { method: "POST" });
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast({
+          title: "Review delayed",
+          description: result.error ?? "Your submission is saved — try refreshing shortly.",
+          variant: "warning",
+        });
+      } else {
+        toast({
+          title: result.passed ? "Quest complete! 🎉" : "Not quite there yet",
+          description: result.feedback,
+          variant: result.passed ? "success" : "warning",
+        });
+        if (result.leveledUp) {
+          window.dispatchEvent(
+            new CustomEvent("ascend:levelup", { detail: { newLevel: result.newLevel } }),
+          );
+        }
+      }
+    } catch {
+      toast({
+        title: "Review delayed",
+        description: "Your submission is saved — try refreshing shortly.",
+        variant: "warning",
+      });
+    }
+
+    setLoading(false);
     router.refresh();
   }
 
