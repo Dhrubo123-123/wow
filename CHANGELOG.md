@@ -2,6 +2,18 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 8 — Dashboard
+
+- `/dashboard` now renders real data: greeting, avatar with level badge,
+  XP progress bar (via the Phase 4 progression lib), streak, a "current
+  quest" card (priority: in_progress > accepted > available, oldest
+  first) with a gradient "Start Quest" CTA, the next milestone from the
+  goal's AI plan, and a skills/achievements placeholder (Phase 16/17).
+- Verified live: shows "Welcome back, QA", the real goal title, Level 2
+  (20/150 XP), the AI-generated "Walk-Jog Intervals" quest with its
+  actual difficulty/XP/time, and "Run 1km continuously" as the next
+  milestone — all sourced from Phases 2-7's data, no placeholders left.
+
 ## Phase 7 — AI goal decomposition
 
 - Added `POST /api/goals/plan`: loads the caller's own goal (RLS-scoped),
