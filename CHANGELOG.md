@@ -2,6 +2,24 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 13 — Evidence storage
+
+- Added `supabase/migrations/0002_storage.sql`: private `quest-evidence`
+  bucket (10 MB limit, `image/jpeg|png|webp` + `application/pdf`
+  allowlist enforced by Storage itself, not just client-side), with
+  `storage.objects` RLS scoping every read/insert to the uploading
+  user's own path prefix (`${user_id}/${quest_attempt_id}/...`) — no
+  update/delete policy, evidence is immutable once uploaded. Applied and
+  verified live.
+- Wired `CameraCapture` (Phase 10) into `QuestActions` for
+  `evidence_type: "image"` quests: capture → upload to the bucket →
+  `quest_evidence` row with `storage_path`/`mime_type`/`size_bytes` set.
+  A caption is still required alongside the photo, since neither AI
+  provider does vision input — the model needs something textual to
+  evaluate regardless of what media was attached.
+- Client-side size guard mirrors the bucket's 10 MB limit so a too-large
+  photo fails fast with a clear message instead of a generic upload error.
+
 ## Phase 12 — Device permissions
 
 - Added `/settings/device-access`: shows camera/microphone/motion/

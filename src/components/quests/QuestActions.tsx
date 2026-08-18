@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, useToast } from "@/components/ui";
+import { CameraCapture } from "@/components/camera/CameraCapture";
 import type { EvidenceType, QuestStatus } from "@/lib/quests";
 
 interface QuestActionsProps {
@@ -14,6 +15,8 @@ interface QuestActionsProps {
   evidenceType: EvidenceType | null;
 }
 
+const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024; // matches the storage bucket's file_size_limit (Phase 13)
+
 /**
  * Drives the quest lifecycle a user is allowed to progress themselves —
  * available → accepted → in_progress → submitted (brief §17/Phase 9).
@@ -21,16 +24,22 @@ interface QuestActionsProps {
  * server-side after AI evaluation (Phase 14), so there's no action here
  * for those states.
  *
- * Camera/image evidence capture is Phase 10; for now every evidence_type
- * falls back to a text description, which is honest about what's
- * actually implemented rather than showing a capture UI that doesn't work.
+ * Image evidence uploads to the private `quest-evidence` Storage bucket
+ * (Phase 13); every other evidence_type still falls back to a text
+ * description — url/file capture UIs don't exist yet, and a caption is
+ * required either way since neither AI provider here does vision input,
+ * so the model needs *something* textual to evaluate regardless of what
+ * media was attached.
  */
 export function QuestActions({ questId, userId, status, attemptId, evidenceType }: QuestActionsProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [evidence, setEvidence] = useState("");
+  const [caption, setCaption] = useState("");
+  const [photo, setPhoto] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isImageEvidence = evidenceType === "image";
 
   async function accept() {
     setLoading(true);
@@ -79,15 +88,39 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!attemptId) return;
+
+    if (photo && photo.size > MAX_EVIDENCE_BYTES) {
+      setError("That photo is too large (max 10 MB). Please retake it.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     const supabase = createClient();
 
+    let storagePath: string | null = null;
+    if (photo) {
+      const path = `${userId}/${attemptId}/${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("quest-evidence")
+        .upload(path, photo, { contentType: "image/jpeg" });
+
+      if (uploadError) {
+        setLoading(false);
+        setError("Something went wrong uploading your photo. Please try again.");
+        return;
+      }
+      storagePath = path;
+    }
+
     const { error: evidenceError } = await supabase.from("quest_evidence").insert({
       quest_attempt_id: attemptId,
       user_id: userId,
-      evidence_type: "text",
-      content: evidence,
+      evidence_type: storagePath ? "image" : "text",
+      content: caption,
+      storage_path: storagePath,
+      mime_type: storagePath ? "image/jpeg" : null,
+      size_bytes: photo?.size ?? null,
     });
 
     if (evidenceError) {
@@ -142,12 +175,29 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
   if (status === "in_progress") {
     return (
       <form onSubmit={submit} className="space-y-3">
+        {isImageEvidence && !photo && (
+          <CameraCapture onCapture={setPhoto} />
+        )}
+
+        {isImageEvidence && photo && (
+          <div className="space-y-2">
+            <p className="text-xs text-success">Photo captured ✓</p>
+            <button
+              type="button"
+              onClick={() => setPhoto(null)}
+              className="text-xs text-muted hover:text-foreground"
+            >
+              Retake
+            </button>
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <label htmlFor="evidence" className="text-sm font-medium">
-            Describe what you did
-            {evidenceType && evidenceType !== "text" && (
+            {isImageEvidence ? "Add a caption" : "Describe what you did"}
+            {evidenceType && evidenceType !== "text" && evidenceType !== "image" && (
               <span className="ml-1 text-xs text-muted">
-                (photo/file/url evidence lands in Phase 10/13 — text for now)
+                (file/url capture lands in a later phase — text for now)
               </span>
             )}
           </label>
@@ -155,14 +205,19 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
             id="evidence"
             required
             rows={4}
-            value={evidence}
-            onChange={(e) => setEvidence(e.target.value)}
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
             placeholder="What did you do, and how does it meet the success criteria?"
             className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
-        <Button type="submit" fullWidth loading={loading}>
+        <Button
+          type="submit"
+          fullWidth
+          loading={loading}
+          disabled={isImageEvidence && !photo}
+        >
           Submit for Review
         </Button>
       </form>
