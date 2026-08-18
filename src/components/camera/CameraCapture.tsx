@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui";
+import { playShutter, vibrate } from "@/lib/audio/sound";
+import { useSoundPreference } from "@/lib/audio/useSoundPreference";
 
 // This never changes after mount, so the subscribe function is a no-op —
 // we only need useSyncExternalStore for its dual server/client snapshot,
@@ -63,6 +65,8 @@ export function CameraCapture({ onCapture, onCancel, className }: CameraCaptureP
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
+  const [showFlash, setShowFlash] = useState(false);
+  const { enabled: soundEnabled } = useSoundPreference();
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -72,6 +76,23 @@ export function CameraCapture({ onCapture, onCancel, className }: CameraCaptureP
   // Safety net: if this component unmounts (user navigates away) while
   // the camera is live, stop it. Never rely solely on user action.
   useEffect(() => stopStream, [stopStream]);
+
+  // The actual fix for "preview shows nothing": this runs *after* the
+  // "streaming" render has mounted <video>, so videoRef.current is
+  // guaranteed to exist here — unlike trying to attach it synchronously
+  // inside requestCamera(), before that element exists.
+  useEffect(() => {
+    if (state !== "streaming") return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    video.play().catch(() => {
+      // Autoplay can be blocked in rare cases even with muted+playsInline;
+      // the visible video element still shows the first frame once the
+      // stream is attached, so this isn't fatal.
+    });
+  }, [state]);
 
   useEffect(() => {
     if (!isSupported || typeof navigator.mediaDevices.enumerateDevices !== "function") return;
@@ -99,10 +120,13 @@ export function CameraCapture({ onCapture, onCancel, className }: CameraCaptureP
       });
       streamRef.current = stream;
       setFacingMode(mode);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      // Don't attach `stream` here — the <video> element for the
+      // "streaming" state hasn't mounted yet at this point (it's
+      // conditionally rendered below), so `videoRef.current` is still
+      // null and the assignment silently does nothing. Flipping to
+      // "streaming" now, and attaching the stream in the effect below
+      // (which runs *after* that render, once the element exists), is
+      // what actually gets the live preview on screen.
       setState("streaming");
     } catch (err) {
       const name = err instanceof DOMException ? err.name : "";
@@ -130,6 +154,11 @@ export function CameraCapture({ onCapture, onCancel, className }: CameraCaptureP
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    playShutter(soundEnabled);
+    vibrate(35);
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 350);
 
     stopStream();
     setCapturedUrl(canvas.toDataURL("image/jpeg", 0.9));
@@ -218,13 +247,23 @@ export function CameraCapture({ onCapture, onCancel, className }: CameraCaptureP
 
       {state === "streaming" && (
         <div className="space-y-2">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full rounded-md bg-black"
-          />
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-black">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="h-full w-full object-cover"
+            />
+            {/* Framing guide — purely visual, never blocks the capture. */}
+            <div className="pointer-events-none absolute inset-4 rounded-lg border-2 border-white/40" />
+            <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-xs text-white/80 drop-shadow">
+              Frame your evidence, then tap Capture
+            </p>
+            {showFlash && (
+              <div className="animate-shutter-flash pointer-events-none absolute inset-0 bg-white" />
+            )}
+          </div>
           <div className="flex gap-2">
             {hasMultipleCameras && (
               <Button variant="secondary" onClick={flip} aria-label="Switch camera">

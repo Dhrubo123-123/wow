@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CelebrationOverlay, type CelebrationContent } from "./CelebrationOverlay";
 import { useSoundPreference } from "@/lib/audio/useSoundPreference";
+import { celebrationLine } from "@/lib/audio/narration";
 
 interface LevelUpDetail {
   newLevel: number;
@@ -20,7 +21,7 @@ interface AchievementDetail {
  * directly, it just fires `ascend:levelup` and moves on.
  */
 export function GlobalCelebrationListener() {
-  const { enabled: soundEnabled } = useSoundPreference();
+  const { enabled: soundEnabled, lang } = useSoundPreference();
   const [content, setContent] = useState<CelebrationContent | null>(null);
 
   const dismiss = useCallback(() => setContent(null), []);
@@ -33,7 +34,7 @@ export function GlobalCelebrationListener() {
         kind: "levelup",
         title: `Level ${detail.newLevel}`,
         subtitle: "New quests unlocked",
-        voiceLine: `Congratulations! You've reached level ${detail.newLevel}.`,
+        voiceLine: celebrationLine("levelup", lang, { newLevel: detail.newLevel }),
       });
     }
 
@@ -44,7 +45,7 @@ export function GlobalCelebrationListener() {
         kind: "achievement",
         title: detail.name,
         subtitle: detail.description,
-        voiceLine: `Achievement unlocked: ${detail.name}.`,
+        voiceLine: celebrationLine("achievement", lang, { achievementName: detail.name }),
       });
     }
 
@@ -54,7 +55,14 @@ export function GlobalCelebrationListener() {
       window.removeEventListener("ascend:levelup", onLevelUp);
       window.removeEventListener("ascend:achievement", onAchievement);
     };
-  }, []);
+  }, [lang]);
 
-  return <CelebrationOverlay content={content} soundEnabled={soundEnabled} onDismiss={dismiss} />;
+  return (
+    <CelebrationOverlay
+      content={content}
+      soundEnabled={soundEnabled}
+      voiceLang={lang}
+      onDismiss={dismiss}
+    />
+  );
 }

@@ -147,6 +147,56 @@ body {
   animation: celebration-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+/* Fireworks burst — bigger "wow" moment reserved for level-up (Phase 15,
+   engagement pass). Each particle starts at its launch origin and shoots
+   outward along a random angle/distance set via CSS custom properties. */
+@keyframes firework-burst {
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fx, 0), var(--fy, 0)) scale(0.9);
+    opacity: 0;
+  }
+}
+.animate-firework {
+  animation: firework-burst ease-out forwards;
+}
+
+/* Soft radiating glow pulse behind the celebration card — reads as
+   "magic" without relying on any external asset. */
+@keyframes magic-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+.animate-magic-glow {
+  animation: magic-glow-pulse 2.2s ease-in-out infinite;
+}
+
+/* Camera shutter flash — a single bright pulse on capture. */
+@keyframes shutter-flash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.animate-shutter-flash {
+  animation: shutter-flash 0.35s ease-out forwards;
+}
+
 /* Respect reduced-motion preferences everywhere (Phase 15 level-up etc.) */
 @media (prefers-reduced-motion: reduce) {
   *,

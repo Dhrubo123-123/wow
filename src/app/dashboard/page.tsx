@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { xpForNextLevel } from "@/lib/progression/levels";
 import { QUEST_DIFFICULTY_LABELS, type QuestDifficulty } from "@/lib/quests";
+import { DashboardWelcomeVoice } from "@/components/audio/DashboardWelcomeVoice";
 
 interface GoalAIPlan {
   skill_level?: number;
@@ -74,6 +75,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4 p-4">
+      <DashboardWelcomeVoice name={displayName.split(" ")[0] ?? "Adventurer"} />
       <div className="flex items-center gap-3">
         <Avatar name={displayName} src={profile.avatar_url} levelBadge={profile.level} />
         <div>

@@ -2,6 +2,55 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Engagement pass (voice, ambient music, camera fix, bigger celebrations)
+
+Follow-up pass after production deployment, in response to feedback that
+the camera preview showed nothing and the experience needed real
+guided-voice + music engagement rather than silent SFX-only celebrations.
+
+- **Fixed a real bug**: the camera `<video>` element only rendered once
+  `CameraCapture` reached the `"streaming"` state, but the code was
+  attaching `stream` to `videoRef.current` *before* that state flip —
+  so `videoRef.current` was still `null` and the assignment silently
+  did nothing. The live preview never appeared. Fixed by moving the
+  attachment into a `useEffect` keyed on `state`, which runs after the
+  video element has actually mounted. Also added a framing guide
+  overlay, a shutter flash + click sound + haptic tick on capture, and
+  a fixed `aspect-[3/4]` container so the preview can't collapse to
+  zero height before metadata loads.
+- **Bilingual guided voice** (English/Hindi): `lib/audio/sound.ts`'s
+  `speak()` now picks a matching system voice by language (`lib.audio`
+  voice selection prefers a local/on-device voice, falls back
+  gracefully if the requested language isn't installed). New
+  `lib/audio/narration.ts` holds the bilingual line library and fires
+  spoken cues at dashboard welcome, quest accepted/started, the evidence
+  capture step, and quest submission — not just the existing level-up/
+  achievement moments.
+- **Generative magical ambient music** (`lib/audio/ambient.ts`): a
+  synthesized pad (detuned oscillators through a slowly breathing
+  lowpass filter) plus a random pentatonic arpeggio, run through a
+  small feedback-delay reverb — no licensed track, everything is
+  Web Audio synthesis. Independent opt-in toggle from SFX; a new
+  `AmbientMusicController` (mounted in `AppShell`) starts/stops it
+  based on the saved preference and pauses it on tab visibility change.
+- **Bigger celebrations**: level-up now triggers a `Confetti
+  variant="fireworks"` burst (multiple radial launch points) instead of
+  a plain falling shower, plus a layered fanfare+clap and a pulsing
+  "magic glow" behind the celebration card. Achievement unlocks got a
+  chime+clap layer too.
+- **Preferences**: extended `useSoundPreference` to also manage
+  ambient-music-enabled and voice-language, stored in the `app_settings
+  .settings` jsonb column that was already provisioned for exactly this
+  — no migration needed. `SoundToggle` (rendered on `/profile`) is now
+  a full "Sound & Voice" panel with all three controls.
+- Verified against the live dev server: Sound & Voice panel renders and
+  toggles correctly, no console errors; the camera flow correctly
+  reaches its "no camera found" error state in the sandboxed browser
+  (no physical webcam available there) without crashing, confirming
+  the state machine and the fixed attachment effect both run cleanly.
+  `npm run lint`, `tsc --noEmit`, `npm run build` (all 19 routes), and
+  `npm test` (24/24) all pass.
+
 ## Phase 22-25 — Performance, testing, error handling, observability
 
 **Phase 22 (performance)** was mostly a discipline check, not new code:

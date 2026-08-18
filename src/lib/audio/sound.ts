@@ -79,20 +79,69 @@ export function playClap(enabled: boolean) {
   noise.start(now);
 }
 
+export type VoiceLang = "en" | "hi";
+
+const LANG_TAGS: Record<VoiceLang, string> = { en: "en-US", hi: "hi-IN" };
+
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+function refreshVoices() {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  const list = window.speechSynthesis.getVoices();
+  if (list.length) cachedVoices = list;
+}
+
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  refreshVoices();
+  // Most browsers load voices asynchronously on first access.
+  window.speechSynthesis.addEventListener?.("voiceschanged", refreshVoices);
+}
+
+/**
+ * Picks the best available system voice for a language — prefers a
+ * local (on-device) voice for lower latency, falls back to any voice
+ * whose lang tag matches, then to the browser default so speech still
+ * happens (just in the wrong accent) rather than silently failing when
+ * e.g. no Hindi voice is installed on this device.
+ */
+function pickVoice(lang: VoiceLang): SpeechSynthesisVoice | null {
+  refreshVoices();
+  const tag = LANG_TAGS[lang];
+  const prefix = tag.split("-")[0];
+  const matches = cachedVoices.filter((v) => v.lang?.toLowerCase().startsWith(prefix));
+  return matches.find((v) => v.localService) ?? matches[0] ?? null;
+}
+
 /**
  * Speaks a short encouraging line via the browser's built-in TTS —
  * the "guided voice" moments. Cancels any in-flight utterance first so
- * rapid events don't queue up and talk over each other.
+ * rapid events don't queue up and talk over each other. Supports both
+ * English and Hindi narration; falls back to whatever voice the browser
+ * has if the requested language isn't installed on this device rather
+ * than staying silent.
  */
-export function speak(text: string, enabled: boolean) {
+export function speak(text: string, enabled: boolean, lang: VoiceLang = "en") {
   if (!enabled) return;
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1;
+  const voice = pickVoice(lang);
+  if (voice) utterance.voice = voice;
+  utterance.lang = LANG_TAGS[lang];
+  utterance.rate = 0.98;
   utterance.pitch = 1.05;
   utterance.volume = 0.9;
   window.speechSynthesis.speak(utterance);
+}
+
+/** Camera shutter click — a bright transient tick, not a noise burst. */
+export function playShutter(enabled: boolean) {
+  if (!enabled) return;
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  tone(ctx, 1800, now, 0.045, 0.12);
+  tone(ctx, 900, now + 0.02, 0.06, 0.08);
 }
 
 /** Vibrates on supported devices — never fatal if unsupported. */

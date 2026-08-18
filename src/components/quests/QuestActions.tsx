@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, useToast } from "@/components/ui";
 import { CameraCapture } from "@/components/camera/CameraCapture";
+import { useSoundPreference } from "@/lib/audio/useSoundPreference";
+import { narrate } from "@/lib/audio/narration";
 import type { EvidenceType, QuestStatus } from "@/lib/quests";
 
 interface QuestActionsProps {
@@ -34,12 +36,29 @@ const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024; // matches the storage bucket's fil
 export function QuestActions({ questId, userId, status, attemptId, evidenceType }: QuestActionsProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { enabled: soundEnabled, lang } = useSoundPreference();
   const [loading, setLoading] = useState(false);
   const [caption, setCaption] = useState("");
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isImageEvidence = evidenceType === "image";
+  const spokenEvidencePromptRef = useRef(false);
+
+  // Guided voice cue for the camera step specifically — fires once when
+  // the evidence-capture UI first appears, guarded by a ref so retaking
+  // a photo (which clears `photo` back to null) doesn't re-trigger it.
+  useEffect(() => {
+    if (
+      status === "in_progress" &&
+      isImageEvidence &&
+      !photo &&
+      !spokenEvidencePromptRef.current
+    ) {
+      spokenEvidencePromptRef.current = true;
+      narrate("evidencePrompt", soundEnabled, lang);
+    }
+  }, [status, isImageEvidence, photo, soundEnabled, lang]);
 
   async function accept() {
     setLoading(true);
@@ -54,6 +73,7 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
       setError("Something went wrong. Please try again.");
       return;
     }
+    narrate("questAccepted", soundEnabled, lang);
     router.refresh();
   }
 
@@ -82,6 +102,7 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
       setError("Something went wrong. Please try again.");
       return;
     }
+    narrate("questStarted", soundEnabled, lang);
     router.refresh();
   }
 
@@ -146,6 +167,7 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
     }
 
     toast({ title: "Submitted!", description: "The Game Master is reviewing your evidence…" });
+    narrate("questSubmitted", soundEnabled, lang);
 
     // Phase 14: evaluate immediately rather than leaving the user
     // waiting on a background job — this is what actually closes the

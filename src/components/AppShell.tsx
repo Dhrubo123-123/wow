@@ -5,6 +5,7 @@ import { BottomNavigation } from "@/components/ui";
 import { HomeIcon, QuestIcon, SkillIcon, MentorIcon, ProfileIcon } from "@/components/icons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GlobalCelebrationListener } from "@/components/celebration/GlobalCelebrationListener";
+import { AmbientMusicController } from "@/components/audio/AmbientMusicController";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: HomeIcon },
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       {showNav && <BottomNavigation items={NAV_ITEMS} />}
       {showNav && <GlobalCelebrationListener />}
+      {showNav && <AmbientMusicController />}
     </div>
   );
 }
