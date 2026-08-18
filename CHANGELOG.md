@@ -2,6 +2,29 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 7 — AI goal decomposition
+
+- Added `POST /api/goals/plan`: loads the caller's own goal (RLS-scoped),
+  calls `generateGoalPlan()`, persists `milestones`/`weekly_objectives`
+  into `goals.ai_plan`, and inserts the *initial* quest set (never
+  hundreds — brief §15) via the admin client, since `quests` has no
+  user-insert policy by design. Server-clamps each proposed `xp_reward`
+  to `MAX_INITIAL_QUEST_XP` (500) regardless of what the AI proposed —
+  brief §14/§22's "AI must not be allowed to award unlimited XP" applies
+  from the very first quests, not just evaluation.
+- On an `AIProviderError`, returns the Phase 24 "GAME MASTER TEMPORARILY
+  UNAVAILABLE" copy — never a raw error.
+- Wired into `OnboardingForm`: right after the goal/profile rows are
+  saved, it calls this route so a brand-new user already has real
+  AI-generated quests by the time they land on the dashboard. Best-effort
+  — a failure here shows a toast but never blocks onboarding completion.
+- Verified live end-to-end: goal "run a 5K without stopping in 60 days"
+  → 3 real, coherent quests ("Walk-Jog Intervals", "Lower-Body Strength",
+  "Mobility Routine"), all `available`, correctly linked to the goal.
+- Known gap: quest `skill_id` is left `null` (folded into the
+  description instead) since the `skills` config table isn't seeded yet
+  — revisit once Phase 16 seeds it.
+
 ## Phase 6 — AI provider
 
 - Added `lib/ai/schemas.ts`: Zod schemas for the four AI JSON contracts

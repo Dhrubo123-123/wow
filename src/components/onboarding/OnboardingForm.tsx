@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, useToast } from "@/components/ui";
 
 const LANGUAGES = [
   { value: "en", label: "English" },
@@ -37,6 +37,7 @@ export function OnboardingForm({
   initialObjective,
 }: OnboardingFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
 
   const [name, setName] = useState(initialName);
   const [language, setLanguage] = useState(initialLanguage || "en");
@@ -85,13 +86,39 @@ export function OnboardingForm({
       })
       .eq("id", userId);
 
-    setLoading(false);
-
     if (profileError) {
+      setLoading(false);
       setError("Something went wrong. Your progress was not saved. Please try again.");
       return;
     }
 
+    // Phase 7: turn the goal into milestones + an initial quest set.
+    // Best-effort — onboarding itself already succeeded, so a flaky AI
+    // call here shouldn't strand the user on this screen (Phase 24: "your
+    // progress is safe"). The dashboard/quests screens (Phase 8/9) will
+    // offer a retry once they exist.
+    try {
+      const res = await fetch("/api/goals/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goalId: goal.id }),
+      });
+      if (!res.ok) {
+        toast({
+          title: "Your first quest is still on its way",
+          description: "We saved your goal — quests will appear shortly.",
+          variant: "warning",
+        });
+      }
+    } catch {
+      toast({
+        title: "Your first quest is still on its way",
+        description: "We saved your goal — quests will appear shortly.",
+        variant: "warning",
+      });
+    }
+
+    setLoading(false);
     router.push("/dashboard");
     router.refresh();
   }
