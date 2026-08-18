@@ -2,6 +2,49 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Phase 22-25 — Performance, testing, error handling, observability
+
+**Phase 22 (performance)** was mostly a discipline check, not new code:
+route-level code splitting via the App Router, `next/image` for
+avatars, zero animation libraries (CSS-only), and parallel `Promise.all`
+queries everywhere multiple independent reads happen (dashboard,
+profile, mentor context). No unnecessary dependencies were ever added —
+confirmed by reviewing `package.json`: Supabase, Zod, clsx/tailwind-
+merge, `server-only`, and (this phase) Vitest for testing.
+
+**Phase 23 (testing):** added Vitest. 24 unit tests across the
+deterministic, non-AI logic the brief calls out by name:
+- `lib/progression/levels.test.ts` — XP/level math (growth curve,
+  threshold boundaries, negative-XP clamping)
+- `lib/quests/transitions.test.ts` — every legal quest/attempt lifecycle
+  step allowed, every skip/reversal/terminal-state-exit rejected
+- `lib/progression/streakLogic.test.ts` — day-gap streak rules
+
+Split `nextStreakState` out of `streaks.ts` into a new `streakLogic.ts`
+specifically so it could be unit-tested directly (`streaks.ts` is
+`server-only` and touches the DB — neither plays well with a plain
+Vitest run). Integration/E2E tests intentionally aren't a mocked suite
+here — this project's actual verification method throughout has been
+live-testing each phase against the real deployed Supabase/Groq stack
+(see every phase's CHANGELOG entry above), which tests the real RLS and
+schema behavior a mock never would.
+
+**Phase 24 (error handling)** was already built in as each phase
+landed, not bolted on after: every AI failure returns the brief's exact
+"GAME MASTER TEMPORARILY UNAVAILABLE" copy, every DB failure returns
+"Something went wrong / your progress is safe", and no route ever
+surfaces a raw error/stack trace — confirmed during Phase 21's live
+testing (`{"error": "..."}` JSON on every failure path, never HTML/stack).
+
+**Phase 25 (observability):** added `lib/observability/logger.ts` —
+structured `console.error` (Vercel/Cloudflare both capture stdout as
+queryable logs without needing a separate service for an MVP) with a
+required `scope` and defensive redaction of known-sensitive keys
+(API keys, passwords, tokens, evidence/free-text content). Wired into
+every failure path across the three AI-backed routes: AI provider
+errors, and DB insert/update failures on `ai_evaluations`, `goals`,
+`quests`, and `ai_messages`.
+
 ## Phase 21 — Security audit
 
 - Secret scan: `git grep` for API key/token/service-role patterns across

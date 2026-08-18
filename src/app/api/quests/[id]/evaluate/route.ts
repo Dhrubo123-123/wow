@@ -5,6 +5,7 @@ import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/progression";
 import { matchSkillId } from "@/lib/quests";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logError } from "@/lib/observability/logger";
 import type { Json } from "@/lib/supabase/types";
 
 // Server-enforced ceilings — the AI's proposal is never trusted outright
@@ -101,6 +102,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       goalTitle: goal?.title ?? "General self-improvement",
     });
   } catch (err) {
+    logError("ai_evaluation", err, { questId, userId });
+
     // Roll the quest back to `submitted` so the user can retry — never
     // strand it in `under_review` on a transient AI failure.
     await admin.from("quests").update({ status: "submitted" }).eq("id", questId);
@@ -132,6 +135,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   });
 
   if (evalInsertError) {
+    logError("db", evalInsertError, { table: "ai_evaluations", userId, questId });
     return NextResponse.json(
       { error: "Something went wrong. Your progress is safe." },
       { status: 500 },
@@ -223,7 +227,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
           instructions: nextQuest.instructions as Json,
           status: "available",
         });
-      } catch {
+      } catch (err) {
+        logError("goal_plan", err, { userId, goalId: quest.goal_id });
         // Non-fatal — the user can still see this evaluation result;
         // they just won't have a fresh quest queued yet.
       }

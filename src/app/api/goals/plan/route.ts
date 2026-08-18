@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { matchSkillId } from "@/lib/quests";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logError } from "@/lib/observability/logger";
 import type { Json } from "@/lib/supabase/types";
 
 const RequestSchema = z.object({
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
       occupation: profile?.occupation ?? null,
     });
   } catch (err) {
+    logError("ai_provider", err, { userId: user.id, goalId: goal.id });
     if (err instanceof AIProviderError) {
       // Phase 24 controlled-error copy — never a raw error to the client.
       return NextResponse.json(
@@ -109,6 +111,7 @@ export async function POST(request: Request) {
     .eq("id", goal.id);
 
   if (updateError) {
+    logError("db", updateError, { table: "goals", userId: user.id, goalId: goal.id });
     return NextResponse.json(
       { error: "Something went wrong. Your progress was not lost." },
       { status: 500 },
@@ -143,6 +146,7 @@ export async function POST(request: Request) {
     .select("id, title, difficulty, xp_reward, status");
 
   if (insertError) {
+    logError("db", insertError, { table: "quests", userId: user.id, goalId: goal.id });
     return NextResponse.json(
       { error: "Something went wrong. Your progress was not lost." },
       { status: 500 },

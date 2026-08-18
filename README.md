@@ -37,6 +37,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build                |
 | `npm run start` | Serve the production build      |
 | `npm run lint`  | ESLint                          |
+| `npm test`      | Vitest unit tests               |
 
 ## Environment variables
 
@@ -52,14 +53,16 @@ to upgrade the dev/deploy Node version before it becomes one.
 
 ## Project status
 
-Phase 0-21 complete (foundation, mobile shell, Supabase auth/schema/RLS,
+Phase 0-25 complete (foundation, mobile shell, Supabase auth/schema/RLS,
 onboarding/profile, XP engine, quest data model, AI provider, goal
 decomposition, dashboard, quest experience, camera, motion/orientation,
 device permissions, evidence storage, AI evaluation, level-up UX, skill
-tree, achievements, AI mentor, PWA, mobile QA, security audit). The
-full core loop (goal → AI quest → evidence → AI evaluation → XP →
-level up → skill unlock → achievements → next quest) works end-to-end
-against the live Groq API and Supabase project. See
+tree, achievements, AI mentor, PWA, mobile QA, security audit,
+performance/testing/error-handling/observability). The full core loop
+(goal → AI quest → evidence → AI evaluation → XP → level up → skill
+unlock → achievements → next quest) works end-to-end against the live
+Groq API and Supabase project. Only Phase 26 (production deployment)
+remains. See
 [CHANGELOG.md](./CHANGELOG.md) for phase-by-phase progress and
 [ARCHITECTURE.md](./ARCHITECTURE.md) for what's built vs. planned.
 

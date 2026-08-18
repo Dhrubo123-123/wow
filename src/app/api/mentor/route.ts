@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAIProvider, AIProviderError, buildMentorContext } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logError } from "@/lib/observability/logger";
 import type { Json } from "@/lib/supabase/types";
 
 const RequestSchema = z.object({
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
   try {
     message = await getAIProvider().generateMentorResponse(context);
   } catch (err) {
+    logError("ai_provider", err, { userId: user.id });
     if (err instanceof AIProviderError) {
       return NextResponse.json(
         { error: "THE GAME MASTER IS TEMPORARILY UNAVAILABLE. Your progress is safe." },
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
 
   // Best-effort history — a failed insert shouldn't hide the answer the
   // user is already looking at.
-  await supabase.from("ai_messages").insert([
+  const { error: insertError } = await supabase.from("ai_messages").insert([
     { user_id: user.id, role: "user", content: parsed.data.question },
     {
       user_id: user.id,
@@ -73,6 +75,10 @@ export async function POST(request: Request) {
       context: context as unknown as Json,
     },
   ]);
+
+  if (insertError) {
+    logError("db", insertError, { table: "ai_messages", userId: user.id });
+  }
 
   return NextResponse.json({ message });
 }
