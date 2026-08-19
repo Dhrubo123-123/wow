@@ -423,6 +423,23 @@ export interface Database {
           updated_at?: string;
         }
       >;
+      push_subscriptions: Table<
+        {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+        }
+      >;
     };
     Functions: {
       admin_retention_cohorts: {

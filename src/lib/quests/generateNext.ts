@@ -8,6 +8,7 @@ import { logEvent } from "@/lib/events/log";
 import { EVENT } from "@/lib/events/names";
 import { checkBudget } from "@/lib/ai/budget";
 import { getCachedQuestTemplate, cacheQuestTemplate, inferCategory, personalizeTemplate } from "@/lib/ai/questCache";
+import { fridayAdjustedMinutes } from "./fridayShortening";
 
 /**
  * Shared "make the next quest for this goal" logic — extracted out of
@@ -65,7 +66,9 @@ export async function generateNextQuest(
         description: `${nextQuest.description}\n\nSkill focus: ${nextQuest.skill}`,
         objective: nextQuest.objective,
         difficulty: nextQuest.difficulty,
-        estimated_minutes: nextQuest.estimated_minutes,
+        // Roadmap item 6 — Friday quests are shorter, a small kindness
+        // heading into the weekend.
+        estimated_minutes: fridayAdjustedMinutes(nextQuest.estimated_minutes, new Date()),
         xp_reward: Math.min(nextQuest.xp_reward, 500),
         evidence_required: nextQuest.evidence_required,
         evidence_type: nextQuest.evidence_type,

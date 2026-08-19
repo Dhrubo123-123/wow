@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import type { PermissionState } from "@/lib/supabase/types";
+import { subscribeToPush } from "@/lib/push/subscribeClient";
 
 type DeviceKey = "camera" | "microphone" | "motion" | "location" | "notifications";
 
@@ -75,9 +76,16 @@ async function checkPermission(key: DeviceKey): Promise<PermissionState> {
       }
       case "notifications": {
         if (typeof Notification === "undefined") return "unsupported";
-        if (Notification.permission === "granted") return "granted";
+        if (Notification.permission === "granted") {
+          void subscribeToPush();
+          return "granted";
+        }
         if (Notification.permission === "denied") return "denied";
         const result = await Notification.requestPermission();
+        // Roadmap item 6 — the moment OS permission is granted is also
+        // the moment to actually create + persist the PushSubscription;
+        // otherwise "granted" would just sit there unused.
+        if (result === "granted") void subscribeToPush();
         return result === "granted" ? "granted" : "denied";
       }
     }

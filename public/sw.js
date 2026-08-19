@@ -47,3 +47,29 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Roadmap item 6 — opt-in Web Push. Payload is plain JSON
+// ({ title, body, url }) written by lib/push/send.ts server-side.
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    return;
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title || "EMBER", {
+      body: payload.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: payload.url || "/dashboard" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/dashboard";
+  event.waitUntil(self.clients.openWindow(url));
+});
