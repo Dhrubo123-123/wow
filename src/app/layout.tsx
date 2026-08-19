@@ -16,15 +16,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ASCEND — Turn Your Real Life Into Quests",
+  title: "EMBER — Turn Your Real Life Into Quests",
   description:
-    "ASCEND is an AI-powered real-life RPG. Turn real-world goals into AI-generated quests, submit evidence, and level up.",
-  applicationName: "ASCEND",
+    "EMBER is an AI-powered real-life RPG. Turn real-world goals into AI-generated quests, submit evidence, and level up.",
+  applicationName: "EMBER",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ASCEND",
+    title: "EMBER",
   },
   formatDetection: {
     telephone: false,

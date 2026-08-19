@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui";
+import { LogoMark } from "@/components/branding/Logo";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -60,8 +61,9 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-dvh flex-col justify-center gap-6 p-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Start Your Ascent</h1>
-        <p className="mt-1 text-sm text-muted">Create your ASCEND account.</p>
+        <LogoMark size={56} className="mx-auto mb-3" />
+        <h1 className="text-2xl font-bold">Light Your Ember</h1>
+        <p className="mt-1 text-sm text-muted">Create your account and start your first quest.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

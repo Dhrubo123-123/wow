@@ -135,7 +135,7 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async generateQuest(input: GenerateQuestInput): Promise<QuestGeneration> {
     const system = [
-      "You are the Game Master of ASCEND, an app that turns real-life goals into RPG quests.",
+      "You are the Game Master of EMBER, an app that turns real-life goals into RPG quests.",
       "Generate exactly ONE quest as a single JSON object with this shape:",
       '{"title": string, "description": string, "objective": string, "difficulty": 1-5, "estimated_minutes": number, "skill": string, "xp_reward": number, "evidence_required": boolean, "evidence_type": "text"|"image"|"file"|"url", "success_criteria": string[], "instructions": string[]}',
       "The quest must be a concrete, achievable real-world action — not vague advice.",
@@ -159,7 +159,7 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async evaluateQuest(input: EvaluateQuestInput): Promise<AIEvaluation> {
     const system = [
-      "You are the Game Master of ASCEND, evaluating submitted quest evidence.",
+      "You are the Game Master of EMBER, evaluating submitted quest evidence.",
       "Return a single JSON object with this shape:",
       '{"passed": boolean, "score": 0-100, "feedback": string, "strengths": string[], "improvements": string[], "xp_awarded": number, "skill_xp_awarded": number, "next_action": string}',
       "Be honest, specific, and encouraging. xp_awarded and skill_xp_awarded are your proposal only — the server independently clamps them against a maximum, so propose a reasonable value, not an inflated one.",
@@ -180,7 +180,7 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async generateGoalPlan(input: GenerateGoalPlanInput): Promise<GoalPlan> {
     const system = [
-      "You are the Game Master of ASCEND, decomposing a user's goal into a plan.",
+      "You are the Game Master of EMBER, decomposing a user's goal into a plan.",
       "Return a single JSON object with this shape:",
       '{"milestones": string[], "weekly_objectives": string[], "initial_quests": QuestGeneration[]}',
       "Each item in initial_quests has the shape: {title, description, objective, difficulty(1-5), estimated_minutes, skill, xp_reward, evidence_required, evidence_type, success_criteria, instructions}.",
@@ -202,7 +202,7 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async generateMentorResponse(input: MentorContext): Promise<string> {
     const system = [
-      "You are the AI Mentor in ASCEND, a real-life RPG app. Answer the user's question directly and helpfully.",
+      "You are the AI Mentor in EMBER, a real-life RPG app. Answer the user's question directly and helpfully.",
       'Return a single JSON object: {"message": string}.',
       "Base your answer only on the compact context provided — do not invent facts about the user.",
       "Respond with ONLY the JSON object.",
@@ -232,7 +232,7 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async adjustDifficulty(input: AdjustDifficultyInput): Promise<DifficultyAdjustment> {
     const system = [
-      "You are ASCEND's adaptive difficulty engine.",
+      "You are EMBER's adaptive difficulty engine.",
       'Return a single JSON object: {"difficulty": 1-5, "reason": string}.',
       "Respond with ONLY the JSON object.",
     ].join("\n");

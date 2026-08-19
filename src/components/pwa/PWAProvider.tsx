@@ -23,7 +23,7 @@ function getDismissedServerSnapshot() {
 
 /**
  * Registers the service worker (offline shell, Phase 19) and shows a
- * custom "Install ASCEND" banner using the native `beforeinstallprompt`
+ * custom "Install EMBER" banner using the native `beforeinstallprompt`
  * event where the browser supports it (Chrome/Android/desktop; iOS
  * Safari never fires this — there, "Add to Home Screen" is manual via
  * the share sheet, which no web API can trigger).
@@ -78,7 +78,7 @@ export function PWAProvider() {
 
   return (
     <div className="fixed inset-x-0 bottom-20 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-border bg-surface-raised p-3 shadow-lg sm:bottom-4 sm:rounded-lg sm:border">
-      <p className="text-sm">Install ASCEND for the full-screen experience.</p>
+      <p className="text-sm">Install EMBER for the full-screen experience.</p>
       <div className="flex shrink-0 gap-2">
         <Button size="sm" variant="ghost" onClick={dismiss}>
           Not now

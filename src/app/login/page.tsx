@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui";
+import { LogoMark } from "@/components/branding/Logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -49,8 +50,9 @@ function LoginForm() {
   return (
     <div className="flex min-h-dvh flex-col justify-center gap-6 p-6">
       <div className="text-center">
+        <LogoMark size={56} className="mx-auto mb-3" />
         <h1 className="text-2xl font-bold">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted">Log in to continue your ascent.</p>
+        <p className="mt-1 text-sm text-muted">Log in to keep your fire burning.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

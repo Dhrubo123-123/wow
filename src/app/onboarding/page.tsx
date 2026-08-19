@@ -25,7 +25,7 @@ export default async function OnboardingPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold">Set up your ascent</h1>
           <p className="mt-1 text-sm text-muted">
-            A few details so ASCEND can generate quests that actually fit
+            A few details so EMBER can generate quests that actually fit
             your life.
           </p>
         </div>

@@ -46,7 +46,7 @@ function buildSystemPrompt(lang: "en" | "hi"): string {
       : "Respond ONLY in English for the \"message\" field.";
 
   return [
-    "You are ASCEND's Live AI Coach — you watch a single live camera frame of someone performing a real-world quest (cooking, exercise, a physical task) and give ONE short, real-time spoken correction or encouragement, the way a coach standing next to them would.",
+    "You are EMBER's Live AI Coach — you watch a single live camera frame of someone performing a real-world quest (cooking, exercise, a physical task) and give ONE short, real-time spoken correction or encouragement, the way a coach standing next to them would.",
     "Rules:",
     "- Only call out something concrete you can actually see in THIS frame — technique, form, a safety issue, an ingredient that looks off. Never invent detail you can't see.",
     "- If the frame is unclear, poorly framed, or you genuinely can't tell what's happening, say status \"good\" and gently ask them to adjust the camera — don't guess.",

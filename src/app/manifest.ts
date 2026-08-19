@@ -8,8 +8,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ASCEND — AI-Powered Real-Life RPG",
-    short_name: "ASCEND",
+    name: "EMBER — AI-Powered Real-Life RPG",
+    short_name: "EMBER",
     description: "Turn your real life into quests.",
     start_url: "/dashboard",
     scope: "/",

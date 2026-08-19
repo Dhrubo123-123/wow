@@ -20,7 +20,7 @@ export default async function DeviceAccessSettingsPage() {
     <div className="space-y-4 p-4">
       <h1 className="text-lg font-semibold">Device Access</h1>
       <p className="text-sm text-muted">
-        ASCEND never bypasses your browser&apos;s own permission prompts —
+        EMBER never bypasses your browser&apos;s own permission prompts —
         this page only reflects and lets you (re)check the current state.
       </p>
       <DevicePermissionsPanel

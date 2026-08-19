@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button, Badge } from "@/components/ui";
+import { Logo } from "@/components/branding/Logo";
 
 export default function LandingPage() {
   return (
@@ -7,9 +8,7 @@ export default function LandingPage() {
       <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
         <Badge variant="accent">AI-Powered Real-Life RPG</Badge>
         <div className="space-y-2">
-          <h1 className="text-gradient-primary text-5xl font-extrabold tracking-tight">
-            ASCEND
-          </h1>
+          <Logo size={104} />
           <p className="text-muted">Turn Your Real Life Into Quests.</p>
         </div>
         <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted">
@@ -26,7 +25,7 @@ export default function LandingPage() {
       <div className="space-y-3 pb-safe">
         <Link href="/signup" className="block">
           <Button fullWidth size="lg">
-            Start Your Ascent
+            Light Your Ember
           </Button>
         </Link>
         <Link href="/login" className="block">

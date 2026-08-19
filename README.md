@@ -1,6 +1,13 @@
-# ASCEND
+# EMBER
 
 **AI-Powered Real-Life RPG.** Turn Your Real Life Into Quests.
+
+> Formerly built and shipped under the working name "ASCEND" — renamed
+> post-launch (see CHANGELOG.md). The repo, Vercel project slug, and
+> production URL (`ascend-ten-opal.vercel.app`) still say "ascend"
+> since renaming infra is a separate, riskier step from renaming the
+> brand users see — everything user-facing (title, manifest, wordmark,
+> icons, in-app copy) says EMBER.
 
 ```text
 GOAL → AI QUEST → ACTION → EVIDENCE → AI EVALUATION → XP → LEVEL UP → SKILL UNLOCK → NEXT QUEST

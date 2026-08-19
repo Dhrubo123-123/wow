@@ -2,6 +2,52 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Rebrand: ASCEND → EMBER, golden emblem + wordmark
+
+User feedback: the plain gradient-text "ASCEND" logo didn't feel like a
+real, premium brand — wanted something with the craft of an epic-legend
+seal, gold, "wow." Also asked for a "real name" — considered several
+directions (Agni, Veer, Tejas — all common Sanskrit-brand words already
+used everywhere in India) before landing on **EMBER**: a plain English
+word (zero pronunciation barrier — matches the "all can use it" goal),
+and a genuinely apt metaphor for the app's actual mechanic — a small
+ember is unrealized potential; every completed quest is fuel that grows
+it into a real flame. The ascending-flame logo mark makes that literal.
+
+- **New brand mark** (`components/branding/Logo.tsx`): a fully vector
+  (SVG) golden emblem — an ascending flame over a sunburst, ringed like
+  an engraved coin/seal with tick marks and a bow-like base flourish —
+  plus a matching gold-gradient wordmark. No external font or image
+  asset; scales crisply at any size from one component.
+- **Real bug caught during this pass**: the emblem's tick marks and
+  sunburst rays are positioned with `Math.cos`/`Math.sin`, which can
+  differ in their last floating-point digit between Node's SSR pass and
+  the browser's V8 — React correctly flagged this as a hydration
+  mismatch on the login/signup pages where the mark is server-rendered.
+  Fixed by rounding every computed coordinate to 3 decimal places
+  before render, which converges both sides to an identical string.
+- **New icons**: regenerated `icon-192`, `icon-512`, `icon-maskable-512`,
+  and `apple-touch-icon` to match the new emblem via a Pillow script
+  (`scripts/generate-icons.py`, checked in for future re-runs) — same
+  composition as the SVG, including a correctly-sized safe zone for the
+  maskable icon (the first icon pass had the ring nearly touching the
+  edge, which Android's circular mask would have clipped).
+  `manifest.ts`'s `name`/`short_name`, `layout.tsx`'s metadata, and
+  every in-app string that said "ASCEND" (onboarding, offline page,
+  device-access settings, install banner, all five AI system prompts)
+  now say "EMBER".
+- Login and signup pages now show the emblem above the heading, with
+  copy nudged to match ("Light Your Ember", "keep your fire burning").
+- The repo, git remote, Vercel project slug, and production URL
+  (`ascend-ten-opal.vercel.app`) intentionally still say "ascend" —
+  renaming infrastructure/domains is a separate, higher-risk step from
+  renaming the brand users actually see, and nothing required it here.
+- Verified in a fresh browser tab (not just a HMR'd one — dev's
+  service worker was serving a stale cached bundle that made the fix
+  look like it hadn't landed; a hard reload + SW unregister confirmed
+  it had). `npm run lint`, `tsc --noEmit`, `npm run build`, and
+  `npm test` (24/24) all pass.
+
 ## Post-launch — Live AI Coach ("AI has eyes")
 
 A real live-vision coaching feature — not evidence capture. While a
