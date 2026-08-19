@@ -126,6 +126,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     questId,
     passed: evaluation.passed,
     score: evaluation.score,
+    xpAwarded: clampedXp,
+    // Bronze/Silver/Gold tiering lands in roadmap item 5 — null until
+    // then rather than inventing a value, so /admin/metrics can
+    // distinguish "not graded yet" from a real tier once it exists.
+    tier: null as "bronze" | "silver" | "gold" | null,
   });
 
   const { error: evalInsertError } = await admin.from("ai_evaluations").insert({

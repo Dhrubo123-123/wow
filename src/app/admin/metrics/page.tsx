@@ -14,6 +14,14 @@ function pct(numerator: number, denominator: number): string {
  * (ADMIN_EMAILS) rather than a role column — there's exactly one or
  * two people who need this, and a new table/RLS policy for that would
  * be more surface area than the problem needs right now.
+ *
+ * TODO(before wider access): this does not scale past "the founder and
+ * one collaborator" — an env var is not an access-control system.
+ * Before adding a third person, replace this with a real
+ * `profiles.is_admin boolean` (or a dedicated `admin_users` table)
+ * gated by RLS, so access can be granted/revoked without a redeploy
+ * and without every admin's email living in plaintext in Vercel's env
+ * var UI.
  */
 export default async function AdminMetricsPage() {
   const supabase = await createClient();

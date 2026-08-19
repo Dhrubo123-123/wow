@@ -2,6 +2,21 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Roadmap item 0b: richer evaluation_returned event
+
+- `evaluation_returned` now also logs the server-clamped `xpAwarded`
+  (never the AI's raw proposal — same clamp already enforced on the
+  actual XP award) and a nullable `tier` field, reserved for item 5's
+  Bronze/Silver/Gold grading — `null` until that ships, not a
+  fabricated value.
+- Added an explicit TODO + doc comment on `/admin/metrics`: the
+  `ADMIN_EMAILS` env-var allowlist is a stopgap for "one founder, one
+  collaborator" and must become a real `is_admin` column/table with
+  RLS before granting access more broadly — an env var isn't an access
+  control system.
+- `npm run lint`, `npm run build` (regenerates Next's route types +
+  typechecks), `npm test` (32/32) all pass.
+
 ## Post-launch — Retention roadmap §0: instrumentation
 
 First of the 8-item retention roadmap, done in the requested order:
