@@ -43,7 +43,7 @@ export default async function ProfilePage() {
 
   const { data: streak } = await supabase
     .from("streaks")
-    .select("current_streak, longest_streak")
+    .select("current_streak, longest_streak, freezes_available")
     .eq("user_id", user.id)
     .single();
 
@@ -80,6 +80,11 @@ export default async function ProfilePage() {
               </span>{" "}
               {streak?.current_streak ?? 0} day streak
             </Badge>
+            {(streak?.freezes_available ?? 0) > 0 && (
+              <Badge title="Streak freezes — automatically cover one missed day">
+                ❄️ {streak?.freezes_available}
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>

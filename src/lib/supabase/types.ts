@@ -270,12 +270,18 @@ export interface Database {
           longest_streak: number;
           last_activity_date: string | null;
           updated_at: string;
+          freezes_available: number;
+          last_streak_before_break: number | null;
+          streak_break_expires_at: string | null;
         },
         {
           user_id: string;
           current_streak?: number;
           longest_streak?: number;
           last_activity_date?: string | null;
+          freezes_available?: number;
+          last_streak_before_break?: number | null;
+          streak_break_expires_at?: string | null;
         }
       >;
       ai_evaluations: Table<

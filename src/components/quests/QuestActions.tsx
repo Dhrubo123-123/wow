@@ -189,6 +189,25 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
           description: result.feedback,
           variant: result.passed ? "success" : "warning",
         });
+
+        // A silent streak-save or restore reads as a bug if it isn't
+        // explained — surface it explicitly rather than let the number
+        // just change unexpectedly.
+        if (result.streak?.freezeUsed) {
+          toast({
+            title: "❄️ Streak freeze used",
+            description: `A missed day was covered automatically. ${result.streak.freezesAvailable} freeze${result.streak.freezesAvailable === 1 ? "" : "s"} left.`,
+            variant: "success",
+          });
+        }
+        if (result.streak?.streakEarnedBack) {
+          toast({
+            title: "🔥 Streak restored!",
+            description: `You earned your ${result.streak.currentStreak}-day streak back.`,
+            variant: "success",
+          });
+        }
+
         // Stagger level-up + achievement celebrations so they queue
         // one after another instead of one immediately replacing the
         // other (CelebrationOverlay shows a single moment at a time).

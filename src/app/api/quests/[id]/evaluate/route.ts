@@ -151,7 +151,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   let leveledUp = false;
   let newLevel: number | null = null;
-  let streak: { currentStreak: number; longestStreak: number } | null = null;
+  let streak: Awaited<ReturnType<typeof updateStreak>> | null = null;
   const newAchievements: { key: string; name: string; description: string | null }[] = [];
 
   // unlockAchievement is idempotent (Phase 2's unique(user_id,

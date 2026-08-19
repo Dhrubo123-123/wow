@@ -2,6 +2,67 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Retention roadmap + streak freeze/earn-back (research-backed)
+
+User brought back sourced research (Duolingo's own blog/PM interviews,
+a peer-reviewed Strava kudos study, Trophy's gamification benchmark
+data, Habitica post-mortems, Adjust/AppsFlyer/Statista retention
+benchmarks) on what actually drives day-2/day-7 retention in habit
+apps. Full prioritized roadmap below; shipped the top item now.
+
+**Roadmap, ranked by cited effect size:**
+1. **Streak freeze + earn-back** (shipped this pass) — apps with streak
+   freezes average ~48% longer streaks (Trophy data); Duolingo's
+   earn-back mechanic increased retention among users who'd break a
+   streak. Cheap to build, ties for #1 impact.
+2. **Social layer** (not yet built — real schema work) — Duolingo:
+   users with ≥1 shared streak are 22% more likely to complete their
+   daily lesson; Strava: a 329-runner longitudinal study found kudos
+   recipients run more and more often. Habitica's post-mortems warn the
+   party system's accountability evaporates once a party goes quiet —
+   so any implementation should keep parties tiny (2-3) and let the AI
+   Game Master re-pair abandoned parties rather than leaving them dead.
+3. **Day-one guaranteed win** (not yet built) — Trophy: users who
+   unlock an achievement on day one retain at 33.4% vs 20.4% who
+   don't. Needs an onboarding change: guarantee a completable quest in
+   the first session, before asking for anything else.
+4. **Variable rewards as "week-one sizzle"** (not yet built) — the
+   psychology is real (variable-ratio schedules resist extinction best)
+   but the research is clear this alone doesn't sustain long-term habit
+   formation — stable, same-time-same-place cues do. Recommendation:
+   add a small randomized bonus-XP roll (still server-clamped, per the
+   brief's "never unlimited XP" rule) as flavor, not the core loop.
+5. **Copy tuning** (not yet built, cheapest possible win) — Duolingo
+   changed one CTA ("continue" → "commit to my goal") and saw a
+   measurable DAU lift from that alone.
+6. **Friday-easy-quest** (not yet built) — Trophy data: Friday accounts
+   for >25% of all streak losses industry-wide; a deliberately low-
+   effort Friday quest is a plausible direct mitigation.
+
+**What shipped now — streak freeze + earn-back:**
+- New `streaks` columns: `freezes_available` (starts at 1, replenishes
+  +1 every 7-day streak milestone, capped at 2), `last_streak_before_break`
+  + `streak_break_expires_at` (a 2-day grace window to restore a broken
+  streak of 2+ days rather than resetting to 1 forever).
+- `lib/progression/streakLogic.ts` rewritten as a pure, fully-tested
+  state machine (8 new test cases: freeze-bridges-one-missed-day,
+  freeze-unavailable-resets, earn-back-restores-within-window,
+  earn-back-expires, freeze-replenishment-and-cap). Still strictly
+  additive — no XP/level penalty ever, matching both the brief's
+  original design and the research finding that punishment mechanics
+  (Habitica's HP loss, cited by name) correlate with worse long-term
+  retention.
+- `QuestActions` now explicitly toasts "❄️ Streak freeze used" and
+  "🔥 Streak restored!" — a silent number change here would read as a
+  bug, not a feature.
+- Dashboard/profile streak badges show the freeze count (❄️ N) so the
+  mechanic is visible, not hidden state.
+- Migration applied directly to the live Supabase project via the
+  Management API's SQL endpoint (no CLI migration tooling in this
+  project — same pattern as every prior migration).
+- `npm run lint`, `tsc --noEmit`, `npm run build`, and `npm test`
+  (32/32, up from 24 — 8 new streak-logic cases) all pass.
+
 ## Post-launch — Interactive voice mentor + display typography + a real perf fix
 
 Two separate asks landed together: the AI Mentor needed to actually

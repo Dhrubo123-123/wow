@@ -59,7 +59,7 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: true }),
     supabase
       .from("streaks")
-      .select("current_streak")
+      .select("current_streak, freezes_available")
       .eq("user_id", user.id)
       .single(),
   ]);
@@ -94,12 +94,19 @@ export default async function DashboardPage() {
             label={`Level ${profile.level}`}
             showValue
           />
-          <Badge variant="accent">
-            <span className="animate-flame-flicker" aria-hidden="true">
-              🔥
-            </span>{" "}
-            {streak?.current_streak ?? 0} day streak
-          </Badge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="accent">
+              <span className="animate-flame-flicker" aria-hidden="true">
+                🔥
+              </span>{" "}
+              {streak?.current_streak ?? 0} day streak
+            </Badge>
+            {(streak?.freezes_available ?? 0) > 0 && (
+              <Badge title="Streak freezes — automatically cover one missed day">
+                ❄️ {streak?.freezes_available}
+              </Badge>
+            )}
+          </div>
         </CardContent>
       </Card>
 
