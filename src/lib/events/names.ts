@@ -17,6 +17,12 @@ export const EVENT = {
   EARNBACK_STARTED: "earnback_started",
   EARNBACK_SUCCEEDED: "earnback_succeeded",
   EARNBACK_EXPIRED: "earnback_expired",
+  // AI-budget protection (roadmap item A) — one call, one event, from
+  // every Groq request routed through lib/ai/gateway.ts.
+  AI_CALL_LOGGED: "ai_call_logged",
+  PAYWALL_SHOWN: "paywall_shown",
+  PAYWALL_CLICKED: "paywall_clicked",
+  PAYMENT_CAPTURED: "payment_captured",
   // Not wired up yet — reserved for retention roadmap §7 (social layer).
   PARTY_INVITED: "party_invited",
   PARTY_JOINED: "party_joined",

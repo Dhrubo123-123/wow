@@ -381,6 +381,38 @@ export interface Database {
           props?: Json;
         }
       >;
+      quest_template_cache: Table<
+        {
+          id: string;
+          category: string;
+          difficulty: number;
+          day_index: number;
+          template: Json;
+          created_at: string;
+        },
+        {
+          category: string;
+          difficulty: number;
+          day_index: number;
+          template: Json;
+        }
+      >;
+      mentor_faq_cache: Table<
+        {
+          id: string;
+          normalized_question: string;
+          answer: string;
+          hit_count: number;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          normalized_question: string;
+          answer: string;
+          hit_count?: number;
+          updated_at?: string;
+        }
+      >;
     };
     Functions: {
       admin_retention_cohorts: {

@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAIProvider, AIProviderError } from "@/lib/ai";
+import { getAIProvider, AIProviderError, type QuestGeneration } from "@/lib/ai";
 import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/progression";
 import { matchSkillId } from "@/lib/quests";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logError } from "@/lib/observability/logger";
 import { logEvent } from "@/lib/events/log";
 import { EVENT } from "@/lib/events/names";
+import { checkBudget, isOrgBudgetNearlyExhausted } from "@/lib/ai/budget";
+import { getCachedQuestTemplate, cacheQuestTemplate, inferCategory, personalizeTemplate } from "@/lib/ai/questCache";
 import type { Json } from "@/lib/supabase/types";
+
+// The text model the configured provider actually uses — see
+// AI_PROVIDER/GROQ_MODEL in .env.local. Org-wide budget degradation
+// (checkBudget's isOrgBudgetNearlyExhausted) is checked against this
+// specific model's real RPD, not a guess.
+const TEXT_MODEL = "openai/gpt-oss-120b" as const;
 
 // Server-enforced ceilings — the AI's proposal is never trusted outright
 // (brief §14/§22: "AI must not be allowed to award unlimited XP").
@@ -47,7 +55,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   // RLS scopes this to the caller's own quest.
   const { data: quest, error: questError } = await supabase
     .from("quests")
-    .select("id, user_id, goal_id, skill_id, title, objective, success_criteria, xp_reward, status")
+    .select("id, user_id, goal_id, skill_id, title, objective, success_criteria, xp_reward, status, difficulty")
     .eq("id", questId)
     .single();
 
@@ -89,20 +97,58 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const admin = createAdminClient();
 
+  // Roadmap item A graceful degradation: if this user is already over
+  // their daily evaluation budget, OR the whole org is near Groq's
+  // real daily limit for the text model (checked BEFORE spending a
+  // call, not after failing one), don't call the AI at all. The quest
+  // stays "submitted" (never touched under_review) so a later retry —
+  // by the user, or a future scheduled job — can complete the real
+  // evaluation. What ships in this pass: the non-blocking, honest
+  // response and the data model to support a deferred retry; the
+  // actual "re-process within an hour" background job needs real
+  // scheduled-function infra (Vercel Cron or similar) that isn't wired
+  // up yet — flagged here rather than silently left half-built.
+  const [evalBudget, orgNearLimit] = await Promise.all([
+    checkBudget(admin, userId, "evaluations"),
+    isOrgBudgetNearlyExhausted(admin, TEXT_MODEL),
+  ]);
+
+  if (!evalBudget.allowed || orgNearLimit) {
+    // Streak extends on SUBMISSION here, not evaluation — the whole
+    // point of degrading gracefully is not making an already-honest
+    // submission wait on AI capacity that isn't there right now.
+    // Idempotent-safe if the real evaluation runs later the same day
+    // (nextStreakState's gap===0 branch is a no-op).
+    const streak = await updateStreak(admin, userId);
+    await logEvent(admin, userId, EVENT.STREAK_EXTENDED, {
+      currentStreak: streak.currentStreak,
+      degraded: true,
+    });
+    return NextResponse.json({
+      queued: true,
+      passed: null,
+      feedback: "The Game Master is reviewing a lot of quests right now — your XP will land within the hour. Your streak is already safe.",
+      streak,
+    });
+  }
+
   // Mark evaluation as in-flight (submitted -> under_review), matching
   // the lifecycle graph in lib/quests/transitions.ts.
   await admin.from("quests").update({ status: "under_review" }).eq("id", questId);
 
   let evaluation;
   try {
-    evaluation = await getAIProvider().evaluateQuest({
-      questTitle: quest.title,
-      questObjective: quest.objective,
-      successCriteria: (quest.success_criteria as string[] | null) ?? [],
-      evidenceType: evidence?.evidence_type ?? "text",
-      evidenceSummary: evidence?.content ?? "(no description provided)",
-      goalTitle: goal?.title ?? "General self-improvement",
-    });
+    evaluation = await getAIProvider().evaluateQuest(
+      {
+        questTitle: quest.title,
+        questObjective: quest.objective,
+        successCriteria: (quest.success_criteria as string[] | null) ?? [],
+        evidenceType: evidence?.evidence_type ?? "text",
+        evidenceSummary: evidence?.content ?? "(no description provided)",
+        goalTitle: goal?.title ?? "General self-improvement",
+      },
+      { userId, admin },
+    );
   } catch (err) {
     logError("ai_evaluation", err, { questId, userId });
 
@@ -225,15 +271,52 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     // loop (§1: ... XP -> LEVEL UP -> SKILL UNLOCK -> NEXT QUEST)
     // actually continues. A failure here doesn't affect the evaluation
     // result already returned to the user.
+    //
+    // Roadmap item A: check the (category, difficulty) cache before
+    // ever calling the AI — a hit costs zero budget. Personalization
+    // is a plain string substitution (questCache.personalizeTemplate),
+    // not a second AI call, per the brief's "personalise only the
+    // flavour text" without spending more budget than the cached quest
+    // already cost (nothing, on a hit).
     if (quest.goal_id && goal?.title) {
       try {
-        const nextQuest = await getAIProvider().generateQuest({
-          goalTitle: goal.title,
-          primaryObjective: null,
-          occupation: null,
-          skillLevel: 1,
-          recentQuestTitles: [quest.title],
-        });
+        const category = inferCategory(goal.title);
+        const difficulty = quest.difficulty ?? 1;
+        const cachedTemplate = await getCachedQuestTemplate(admin, category, difficulty);
+        let nextQuest: QuestGeneration;
+
+        if (cachedTemplate) {
+          nextQuest = personalizeTemplate(cachedTemplate, goal.title);
+          // Logged explicitly here — a cache hit never reaches
+          // gatewayCall, so nothing else would record it. On a miss,
+          // deliberately NOT logging a second time below: the gateway
+          // call inside generateQuest already logs one ai_call_logged
+          // event for the real request — logging again here would
+          // double-count against the per-user quest_generations
+          // budget (checkBudget just counts matching events).
+          await logEvent(admin, userId, EVENT.AI_CALL_LOGGED, {
+            purpose: "quest_generation",
+            cacheHit: true,
+            outcome: "success",
+          });
+        } else {
+          const genBudget = await checkBudget(admin, userId, "quest_generations");
+          if (!genBudget.allowed) {
+            throw new Error("quest_generations budget exhausted — skipping next-quest generation");
+          }
+          nextQuest = await getAIProvider().generateQuest(
+            {
+              goalTitle: goal.title,
+              primaryObjective: null,
+              occupation: null,
+              skillLevel: 1,
+              recentQuestTitles: [quest.title],
+            },
+            { userId, admin },
+          );
+          void cacheQuestTemplate(admin, category, difficulty, nextQuest);
+        }
+
         await admin.from("quests").insert({
           user_id: userId,
           goal_id: quest.goal_id,

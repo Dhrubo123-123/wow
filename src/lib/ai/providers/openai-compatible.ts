@@ -1,6 +1,6 @@
 import "server-only";
 import type { ZodType } from "zod";
-import { AIProviderError, type AIProvider } from "../types";
+import { AIProviderError, type AIProvider, type AICallContext } from "../types";
 import type {
   GenerateQuestInput,
   EvaluateQuestInput,
@@ -19,11 +19,14 @@ import {
   type GoalPlan,
   type DifficultyAdjustment,
 } from "../schemas";
+import { gatewayCall, GatewayError } from "../gateway";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
+
+type Purpose = "quest_generation" | "evaluation" | "mentor" | "difficulty_adjustment";
 
 export interface OpenAICompatibleConfig {
   /** Shown in error messages / logs so multi-provider failures are traceable. */
@@ -41,40 +44,43 @@ export interface OpenAICompatibleConfig {
  * `response_format: {type: "json_object"}` JSON mode, so the request
  * plumbing, retry-once-then-controlled-error validation, and all five
  * AIProvider methods live here exactly once.
+ *
+ * Roadmap item A: every actual network call now goes through
+ * lib/ai/gateway.ts (queue + rate limit + retry + logging) instead of
+ * a raw `fetch` — this is the one choke point all Groq usage passes
+ * through.
  */
 export class OpenAICompatibleProvider implements AIProvider {
   constructor(private readonly config: OpenAICompatibleConfig) {}
 
-  private async callChat(messages: ChatMessage[]): Promise<string> {
-    const res = await fetch(this.config.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify({
+  private async callChat(messages: ChatMessage[], purpose: Purpose, ctx?: AICallContext): Promise<string> {
+    let data: unknown;
+    try {
+      data = await gatewayCall({
         model: this.config.model,
-        messages,
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new AIProviderError(
-        `${this.config.providerName} API error ${res.status}`,
-        body,
-      );
+        endpoint: this.config.endpoint,
+        apiKey: this.config.apiKey,
+        requestBody: {
+          model: this.config.model,
+          messages,
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+        },
+        purpose,
+        userId: ctx?.userId ?? null,
+        admin: ctx?.admin ?? null,
+      });
+    } catch (err) {
+      if (err instanceof GatewayError) {
+        throw new AIProviderError(`${this.config.providerName} API error: ${err.message}`, err);
+      }
+      throw err;
     }
 
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
+    const content = (data as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]?.message
+      ?.content;
     if (typeof content !== "string") {
-      throw new AIProviderError(
-        `${this.config.providerName} response missing message content`,
-        data,
-      );
+      throw new AIProviderError(`${this.config.providerName} response missing message content`, data);
     }
     return content;
   }
@@ -90,6 +96,8 @@ export class OpenAICompatibleProvider implements AIProvider {
     systemPrompt: string,
     userPrompt: string,
     schema: ZodType<T>,
+    purpose: Purpose,
+    ctx?: AICallContext,
   ): Promise<T> {
     const messages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
@@ -99,7 +107,7 @@ export class OpenAICompatibleProvider implements AIProvider {
     for (let attempt = 0; attempt < 2; attempt++) {
       let raw: string;
       try {
-        raw = await this.callChat(messages);
+        raw = await this.callChat(messages, purpose, ctx);
       } catch (err) {
         if (attempt === 1) throw err;
         continue;
@@ -133,7 +141,7 @@ export class OpenAICompatibleProvider implements AIProvider {
     );
   }
 
-  async generateQuest(input: GenerateQuestInput): Promise<QuestGeneration> {
+  async generateQuest(input: GenerateQuestInput, ctx?: AICallContext): Promise<QuestGeneration> {
     const system = [
       "You are the Game Master of EMBER, an app that turns real-life goals into RPG quests.",
       "Generate exactly ONE quest as a single JSON object with this shape:",
@@ -154,10 +162,10 @@ export class OpenAICompatibleProvider implements AIProvider {
       .filter(Boolean)
       .join("\n");
 
-    return this.generateValidated(system, user, QuestGenerationSchema);
+    return this.generateValidated(system, user, QuestGenerationSchema, "quest_generation", ctx);
   }
 
-  async evaluateQuest(input: EvaluateQuestInput): Promise<AIEvaluation> {
+  async evaluateQuest(input: EvaluateQuestInput, ctx?: AICallContext): Promise<AIEvaluation> {
     const system = [
       "You are the Game Master of EMBER, evaluating submitted quest evidence.",
       "Return a single JSON object with this shape:",
@@ -175,10 +183,10 @@ export class OpenAICompatibleProvider implements AIProvider {
       `Evidence: ${input.evidenceSummary}`,
     ].join("\n");
 
-    return this.generateValidated(system, user, AIEvaluationSchema);
+    return this.generateValidated(system, user, AIEvaluationSchema, "evaluation", ctx);
   }
 
-  async generateGoalPlan(input: GenerateGoalPlanInput): Promise<GoalPlan> {
+  async generateGoalPlan(input: GenerateGoalPlanInput, ctx?: AICallContext): Promise<GoalPlan> {
     const system = [
       "You are the Game Master of EMBER, decomposing a user's goal into a plan.",
       "Return a single JSON object with this shape:",
@@ -197,10 +205,10 @@ export class OpenAICompatibleProvider implements AIProvider {
       .filter(Boolean)
       .join("\n");
 
-    return this.generateValidated(system, user, GoalPlanSchema);
+    return this.generateValidated(system, user, GoalPlanSchema, "quest_generation", ctx);
   }
 
-  async generateMentorResponse(input: MentorContext): Promise<string> {
+  async generateMentorResponse(input: MentorContext, ctx?: AICallContext): Promise<string> {
     const system = [
       "You are the AI Mentor in EMBER, a real-life RPG app. Answer the user's question directly and helpfully.",
       'Return a single JSON object: {"message": string}.',
@@ -226,11 +234,11 @@ export class OpenAICompatibleProvider implements AIProvider {
       .filter(Boolean)
       .join("\n");
 
-    const result = await this.generateValidated(system, user, MentorResponseSchema);
+    const result = await this.generateValidated(system, user, MentorResponseSchema, "mentor", ctx);
     return result.message;
   }
 
-  async adjustDifficulty(input: AdjustDifficultyInput): Promise<DifficultyAdjustment> {
+  async adjustDifficulty(input: AdjustDifficultyInput, ctx?: AICallContext): Promise<DifficultyAdjustment> {
     const system = [
       "You are EMBER's adaptive difficulty engine.",
       'Return a single JSON object: {"difficulty": 1-5, "reason": string}.',
@@ -243,6 +251,6 @@ export class OpenAICompatibleProvider implements AIProvider {
       `Recent pass rate: ${input.recentPassRate}`,
     ].join("\n");
 
-    return this.generateValidated(system, user, DifficultyAdjustmentSchema);
+    return this.generateValidated(system, user, DifficultyAdjustmentSchema, "difficulty_adjustment", ctx);
   }
 }

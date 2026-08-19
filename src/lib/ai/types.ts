@@ -1,9 +1,23 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import type {
   QuestGeneration,
   AIEvaluation,
   GoalPlan,
   DifficultyAdjustment,
 } from "./schemas";
+
+/**
+ * Optional per-call context for gateway logging (roadmap item A) — who
+ * the call is for and which admin client to log the `ai_call_logged`
+ * event with. Optional everywhere: callers that don't pass it (tests,
+ * MockAIProvider, cache-warming) just don't get a logged event, they
+ * don't break.
+ */
+export interface AICallContext {
+  userId?: string | null;
+  admin?: SupabaseClient<Database> | null;
+}
 
 export interface GenerateQuestInput {
   goalTitle: string;
@@ -57,11 +71,11 @@ export interface AdjustDifficultyInput {
  * raw/untrusted JSON.
  */
 export interface AIProvider {
-  generateQuest(input: GenerateQuestInput): Promise<QuestGeneration>;
-  evaluateQuest(input: EvaluateQuestInput): Promise<AIEvaluation>;
-  generateGoalPlan(input: GenerateGoalPlanInput): Promise<GoalPlan>;
-  generateMentorResponse(input: MentorContext): Promise<string>;
-  adjustDifficulty(input: AdjustDifficultyInput): Promise<DifficultyAdjustment>;
+  generateQuest(input: GenerateQuestInput, ctx?: AICallContext): Promise<QuestGeneration>;
+  evaluateQuest(input: EvaluateQuestInput, ctx?: AICallContext): Promise<AIEvaluation>;
+  generateGoalPlan(input: GenerateGoalPlanInput, ctx?: AICallContext): Promise<GoalPlan>;
+  generateMentorResponse(input: MentorContext, ctx?: AICallContext): Promise<string>;
+  adjustDifficulty(input: AdjustDifficultyInput, ctx?: AICallContext): Promise<DifficultyAdjustment>;
 }
 
 /** Thrown after a schema-validated retry still fails — a controlled,

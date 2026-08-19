@@ -1,6 +1,7 @@
 import "server-only";
-import { AIProviderError } from "./types";
+import { AIProviderError, type AICallContext } from "./types";
 import { LiveCoachSchema, type LiveCoachVerdict } from "./schemas";
+import { gatewayCall, GatewayError } from "./gateway";
 
 /**
  * Live AI Coach (post-launch engagement pass) — "AI has eyes" while a
@@ -65,7 +66,7 @@ function buildSystemPrompt(lang: "en" | "hi"): string {
  * after one retry — callers should show the brief's standard "GAME
  * MASTER TEMPORARILY UNAVAILABLE" copy, same as every other AI call.
  */
-export async function analyzeLiveFrame(input: LiveCoachInput): Promise<LiveCoachVerdict> {
+export async function analyzeLiveFrame(input: LiveCoachInput, ctx?: AICallContext): Promise<LiveCoachVerdict> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new AIProviderError("Live AI Coach requires GROQ_API_KEY (vision-capable model)");
@@ -99,13 +100,11 @@ export async function analyzeLiveFrame(input: LiveCoachInput): Promise<LiveCoach
   for (let attempt = 0; attempt < 2; attempt++) {
     let raw: string;
     try {
-      const res = await fetch(GROQ_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+      const data = await gatewayCall({
+        model: VISION_MODEL,
+        endpoint: GROQ_ENDPOINT,
+        apiKey,
+        requestBody: {
           model: VISION_MODEL,
           messages,
           response_format: { type: "json_object" },
@@ -118,21 +117,23 @@ export async function analyzeLiveFrame(input: LiveCoachInput): Promise<LiveCoach
           // on a task this simple. Confirmed via direct testing against
           // the live API before wiring this up.
           reasoning_effort: "none",
-        }),
+        },
+        purpose: "coach",
+        userId: ctx?.userId ?? null,
+        admin: ctx?.admin ?? null,
       });
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new AIProviderError(`Groq vision API error ${res.status}`, body);
-      }
-
-      const data = await res.json();
-      const content = data?.choices?.[0]?.message?.content;
+      const content = (data as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]
+        ?.message?.content;
       if (typeof content !== "string") {
         throw new AIProviderError("Groq vision response missing message content", data);
       }
       raw = content;
     } catch (err) {
+      if (err instanceof GatewayError) {
+        if (attempt === 1) throw new AIProviderError(`Groq vision API error: ${err.message}`, err);
+        continue;
+      }
       if (attempt === 1) throw err;
       continue;
     }

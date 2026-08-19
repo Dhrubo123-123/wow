@@ -26,14 +26,23 @@ interface CoachFeedback {
   at: number;
 }
 
-// The vision model's account-level rate limit is ~8000 tokens/minute,
+// The vision model's account-level rate limit is ~8000 tokens/minute
+// (shared across the WHOLE org, not per-user — see lib/ai/limits.ts),
 // and one frame costs ~1850 tokens regardless of resolution (fixed
-// image tiling — confirmed by direct testing, not a guess). ~4
-// requests/minute is the real sustainable ceiling, so 15s is the
-// fastest cadence that doesn't routinely 429 rather than an arbitrary
-// "feels responsive" number.
-const FRAME_INTERVAL_MS = 15000;
-const MAX_SESSION_MS = 6 * 60 * 1000; // 6 minutes — bounds vision-API cost per session
+// image tiling — confirmed by direct testing, not a guess). With ~200
+// users potentially running this, 45s (roadmap item A's number) is
+// the conservative default — well under the per-user 15s ceiling
+// measured earlier, but that number assumed nobody else was calling
+// the vision model at the same moment, which isn't true once real
+// users are on it. Bounded by a snapshot COUNT, not just a timer — a
+// slower cadence with an unbounded duration could still run away.
+const FRAME_INTERVAL_MS = 45_000;
+const MAX_SNAPSHOTS = 20;
+const MAX_SESSION_MS = FRAME_INTERVAL_MS * MAX_SNAPSHOTS; // 15 minutes, hard backstop
+// Frames are downscaled before upload — token cost turned out to be
+// roughly resolution-independent (fixed tiling, tested directly), but
+// this still cuts upload bandwidth/latency for nothing lost.
+const MAX_FRAME_DIMENSION = 512;
 const STATUS_STYLES: Record<CoachStatus, string> = {
   good: "border-success bg-success/10 text-success",
   warning: "border-warning bg-warning/10 text-warning",
@@ -54,7 +63,7 @@ export interface LiveCoachProps {
  * "AI has eyes" — a live, opt-in vision coach that watches the camera
  * while a quest is underway and speaks real-time corrections (form,
  * technique, safety) rather than just scoring a final photo. This is
- * genuinely a periodic-snapshot analysis (one frame roughly every 15s,
+ * genuinely a periodic-snapshot analysis (one frame roughly every 45s,
  * see FRAME_INTERVAL_MS), not literal continuous video understanding —
  * no hosted model does that affordably — but at this cadence it reads
  * as "someone watching you work."
@@ -80,12 +89,14 @@ export function LiveCoach({ questId, className }: LiveCoachProps) {
   const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recentMessagesRef = useRef<string[]>([]);
   const inFlightRef = useRef(false);
+  const snapshotCountRef = useRef(0);
 
   const [active, setActive] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<CoachFeedback | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [snapshotCount, setSnapshotCount] = useState(0);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -107,25 +118,54 @@ export function LiveCoach({ questId, className }: LiveCoachProps) {
 
   const captureAndAnalyze = useCallback(async () => {
     if (inFlightRef.current) return; // never overlap two in-flight analyses
+    if (snapshotCountRef.current >= MAX_SNAPSHOTS) {
+      stop();
+      return;
+    }
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Downscale to at most MAX_FRAME_DIMENSION on the longest edge —
+    // cuts upload size/latency; the coach doesn't need full sensor
+    // resolution to judge form/technique in frame.
+    const scale = Math.min(1, MAX_FRAME_DIMENSION / Math.max(video.videoWidth, video.videoHeight));
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const frame = canvas.toDataURL("image/jpeg", 0.6);
+
+    const isSessionStart = snapshotCountRef.current === 0;
 
     inFlightRef.current = true;
     try {
       const res = await fetch(`/api/quests/${questId}/coach`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ frame, lang, recentMessages: recentMessagesRef.current }),
+        body: JSON.stringify({
+          frame,
+          lang,
+          recentMessages: recentMessagesRef.current,
+          isSessionStart,
+        }),
       });
-      if (!res.ok) return; // a missed check-in is fine, next interval retries
+      if (!res.ok) {
+        // A rejected session-start (e.g. trial already used) should
+        // end the session outright rather than silently retrying
+        // every 45s for the rest of it — and the user should actually
+        // see why, not just watch it quietly stop.
+        if (isSessionStart) {
+          const body = await res.json().catch(() => null);
+          if (body?.error) setError(body.error);
+          stop();
+        }
+        return;
+      }
+
+      snapshotCountRef.current += 1;
+      setSnapshotCount(snapshotCountRef.current);
 
       const verdict = (await res.json()) as { status: CoachStatus; message: string };
       setFeedback({ status: verdict.status, message: verdict.message, at: Date.now() });
@@ -134,12 +174,14 @@ export function LiveCoach({ questId, className }: LiveCoachProps) {
       speak(verdict.message, soundEnabled, lang);
       if (verdict.status === "danger") vibrate([100, 60, 100, 60, 100]);
       else if (verdict.status === "warning") vibrate(100);
+
+      if (snapshotCountRef.current >= MAX_SNAPSHOTS) stop();
     } catch {
       // Network hiccup on one frame isn't worth surfacing — it'll try again.
     } finally {
       inFlightRef.current = false;
     }
-  }, [questId, lang, soundEnabled]);
+  }, [questId, lang, soundEnabled, stop]);
 
   async function start() {
     setStarting(true);
@@ -152,6 +194,8 @@ export function LiveCoach({ questId, className }: LiveCoachProps) {
       streamRef.current = stream;
       setActive(true);
       setElapsedMs(0);
+      snapshotCountRef.current = 0;
+      setSnapshotCount(0);
       recentMessagesRef.current = [];
     } catch (err) {
       const name = err instanceof DOMException ? err.name : "";
@@ -223,7 +267,7 @@ export function LiveCoach({ questId, className }: LiveCoachProps) {
             <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
             <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
-              Live · {mm}:{ss} left
+              Live · {snapshotCount}/{MAX_SNAPSHOTS} checks · {mm}:{ss} left
             </div>
             {feedback && (
               <div

@@ -2,6 +2,81 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Roadmap item A: protect the AI budget for ~200 users
+
+Groq's free tier (`lib/ai/limits.ts`, read from console.groq.com/docs/
+rate-limits on 2026-08-19, not guessed — RPM 30 / RPD 1000 / TPM 8000 /
+TPD 200000, **shared at the ORGANIZATION level**, not per-user) is the
+real constraint standing between this app and ~200 real users. Built
+the protection stack the brief asked for, then ran a capacity analysis
+against it rather than assuming it was enough.
+
+- **`lib/ai/gateway.ts`**: every Groq call (text + vision) now routes
+  through one choke point — per-model sliding-window RPM limiter, a
+  3-slot concurrency queue, exponential backoff + retry on 429/5xx, a
+  20s timeout, and an `ai_call_logged` event on every call (model,
+  tokens, latency, cache_hit, outcome) surfaced in `/admin/metrics`.
+- **`lib/ai/budget.ts`**: per-user daily limits (free = 1 quest-gen, 1
+  evaluation, 5 mentor turns/day; Live Coach = 1 trial session *total*,
+  not daily) derived from the existing `events` log — no new
+  usage-counter table, just a count query against data that's already
+  written. Also an **org-wide** check (`isOrgBudgetNearlyExhausted`)
+  against the real shared RPD, independent of any single user's status.
+- **Caching**: quests cached by (category, difficulty) — category
+  inferred from the goal title by keyword match, personalization is a
+  plain string substitution, not a second AI call. Mentor FAQ answers
+  cached by normalized question string. Verified live: asking the same
+  question with different casing/punctuation returned the identical
+  cached answer on the second call.
+- **Live Coach**: cadence 15s → 45s, hard-capped at 20 snapshots/session
+  (auto-ends), frames downscaled to 512px before upload, 1 free trial
+  *session* (not frame — a dedicated `sessionStart` marker distinguishes
+  the two, since naively counting every frame would make "1 session"
+  mean "1 frame").
+- **Graceful degradation**: over per-user or org-wide evaluation budget
+  → the quest stays `submitted` (never touches `under_review`), the
+  streak extends immediately on submission (idempotent-safe if the real
+  evaluation runs later the same day), and the response is an honest
+  "reviewing — XP within the hour", never a raw error. **Known gap,
+  flagged not hidden**: nothing automatically re-processes that queued
+  evaluation yet — this pass ships the data model and the honest
+  response, not a working scheduled job (needs Vercel Cron or similar,
+  not wired up).
+- **Real bug found and fixed via live testing, not just review**:
+  `FREE_DAILY_LIMITS` used camelCase keys (`mentorTurns`) while
+  `checkBudget` indexed it with the snake_case `kind` value
+  (`mentor_turns`) — `0 < undefined` is `false` in JS, so this silently
+  made every mentor/quest-gen budget check report "exhausted"
+  permanently (evaluations happened to work by coincidence — same
+  spelling both ways). Caught by actually calling `/api/mentor` live
+  and getting the "budget used" message on a brand-new day-one account,
+  which shouldn't have been possible. Fixed and reverified live:
+  correct AI response on the next call, correct `ai_call_logged` event
+  with real token/latency data, cache hit confirmed on a repeat
+  question.
+- **`scripts/load-test-ai-budget.mjs`**: capacity analysis for 200
+  users' daily pattern against the real limits (models the gateway's
+  own algorithm rather than importing it — that module has `import
+  "server-only"`, which throws outside Next's bundler). Findings:
+  the **text model is fine even worst-case** (evaluations alone, never
+  cached, are only 200/day — 20% of RPD). The **vision model (Live
+  Coach) was the real day-one risk**: 30%+ of users trying their trial
+  at once could hit 1200 calls against the shared 1000/day budget even
+  with the per-user 1-session cap, since nothing stopped many
+  *different* users' first trials from landing the same day. **Fixed
+  this pass**: the coach route now also checks the org-wide budget
+  before allowing a new session to start, not just the per-user cap.
+  **Also flagged, not fixed** (out of this pass's scope — the brief
+  said treat RPD as binding): TPD comes out over budget in every
+  scenario the script modeled, on both models — a single Live Coach
+  trial alone (20 snapshots × ~1850 tokens) is ~18.5% of the *entire*
+  org's daily token budget. Worth revisiting if Groq starts enforcing
+  TPD as strictly as RPD.
+- `npm run lint`, `npm run build`, `npm test` (39/39) all pass.
+  Verified live end-to-end against the real dev server and real
+  Supabase project: budget gating, AI calls, event logging, and cache
+  hits all confirmed working with real data, not just passing a build.
+
 ## Post-launch — Roadmap item 1: freeze/earn-back fixes
 
 - **Freeze coverage is now predicted, not discovered retroactively.**

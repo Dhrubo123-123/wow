@@ -6,6 +6,7 @@ import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { matchSkillId } from "@/lib/quests";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logError } from "@/lib/observability/logger";
+import { checkBudget } from "@/lib/ai/budget";
 import type { Json } from "@/lib/supabase/types";
 
 const RequestSchema = z.object({
@@ -77,14 +78,34 @@ export async function POST(request: Request) {
   const existingPlan = (goal.ai_plan ?? {}) as { skill_level?: number };
   const skillLevel = existingPlan.skill_level ?? 1;
 
+  const admin = createAdminClient();
+
+  // Roadmap item A: 1 quest-gen/day on the free plan — checked before
+  // the call, not after, since there's no cache fallback for a full
+  // goal plan (milestones/objectives are goal-specific, unlike the
+  // single-quest cache used by the evaluate route's "next quest" step).
+  const budget = await checkBudget(admin, user.id, "quest_generations");
+  if (!budget.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "You've used today's planning budget — try again tomorrow, or keep working your current quests in the meantime.",
+      },
+      { status: 429 },
+    );
+  }
+
   let plan;
   try {
-    plan = await getAIProvider().generateGoalPlan({
-      goalTitle: goal.title,
-      targetDays: goal.target_days,
-      skillLevel,
-      occupation: profile?.occupation ?? null,
-    });
+    plan = await getAIProvider().generateGoalPlan(
+      {
+        goalTitle: goal.title,
+        targetDays: goal.target_days,
+        skillLevel,
+        occupation: profile?.occupation ?? null,
+      },
+      { userId: user.id, admin },
+    );
   } catch (err) {
     logError("ai_provider", err, { userId: user.id, goalId: goal.id });
     if (err instanceof AIProviderError) {
@@ -96,8 +117,6 @@ export async function POST(request: Request) {
     }
     throw err;
   }
-
-  const admin = createAdminClient();
 
   const { error: updateError } = await admin
     .from("goals")
