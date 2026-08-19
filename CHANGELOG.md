@@ -2,6 +2,40 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Roadmap item A3: Vercel Cron actually processes queued evaluations
+
+Item A's graceful degradation shipped an honest "reviewing — XP within
+the hour" response but no job that actually did the reviewing. This
+closes that gap for real.
+
+- Extracted the evaluate route's core logic (call the Game Master,
+  clamp XP, award it, update streak/skills/achievements, generate the
+  next quest) into `lib/quests/evaluateQuest.ts`'s `runQuestEvaluation`
+  — used by both the route (normal synchronous path) and the new cron
+  job, so there's exactly one implementation of "what closes the core
+  loop", not two copies that can drift.
+- New `GET /api/jobs/process-evaluations`, gated by `CRON_SECRET`
+  (Vercel's own convention: it sends `Authorization: Bearer
+  $CRON_SECRET` automatically when that env var is set). Sweeps any
+  `quest_attempts` still `submitted` more than 90 seconds after
+  submission — long enough to never race a legitimate in-flight
+  request — in batches of 10, re-checking the org-wide AI budget
+  before every single item (not just once per run) so a mid-sweep
+  budget crossing stops spending immediately.
+- `vercel.json`: cron schedule every 10 minutes.
+- **Verified live, not just built**: manually staged a real stale
+  `submitted` quest attempt with real evidence, called the cron
+  endpoint with the real secret through the running dev server, and
+  confirmed it actually ran a real AI evaluation — correctly scored
+  thin evidence as not meeting the quest's success criteria (score 30,
+  5 XP, specific feedback naming what was missing) and moved the quest
+  to `failed`, never leaving it stuck in `under_review`.
+- `npm run lint`, `npm run build`, `npm test` (39/39) all pass.
+
+**Env var needed**: `CRON_SECRET` — generated and added to Vercel
+production automatically as part of this change; nothing for anyone to
+set up manually.
+
 ## Post-launch — Roadmap item A2: right-size the AI budget for ~10 trial users
 
 Target changed from ~200 users to ~10 concurrent trial users with FULL
