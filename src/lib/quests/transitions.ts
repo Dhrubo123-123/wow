@@ -20,6 +20,7 @@ const QUEST_TRANSITIONS: Record<QuestStatus, QuestStatus[]> = {
   under_review: ["completed", "failed"],
   completed: [],
   failed: [],
+  expired: [],
 };
 
 /** Statuses a user is allowed to set directly (RLS-enforced server-side too). */
@@ -34,7 +35,7 @@ export function canTransitionQuest(from: QuestStatus, to: QuestStatus): boolean 
 }
 
 export function isTerminalQuestStatus(status: QuestStatus): boolean {
-  return status === "completed" || status === "failed";
+  return status === "completed" || status === "failed" || status === "expired";
 }
 
 const QUEST_ATTEMPT_TRANSITIONS: Record<QuestAttemptStatus, QuestAttemptStatus[]> = {

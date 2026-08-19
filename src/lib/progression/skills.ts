@@ -2,7 +2,13 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
-const MASTERY_XP_PER_LEVEL = 200;
+export const MASTERY_XP_PER_LEVEL = 200;
+
+/** How much skill XP stands between `currentXp` and the next mastery node. */
+export function xpToNextSkillNode(currentXp: number): number {
+  const remainder = currentXp % MASTERY_XP_PER_LEVEL;
+  return MASTERY_XP_PER_LEVEL - remainder;
+}
 
 /**
  * Adds skill-specific XP (separate from the account-level XP ledger) and

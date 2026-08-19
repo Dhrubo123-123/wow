@@ -30,6 +30,11 @@ export const AIEvaluationSchema = z.object({
   xp_awarded: z.number().int().min(0),
   skill_xp_awarded: z.number().int().min(0),
   next_action: z.string().min(1).max(500),
+  // Roadmap item 3 — the "evaluation ceremony" names ONE concrete thing
+  // the GM actually saw/read in the evidence (e.g. "the dumbbell rack
+  // in the corner", "the phrase 'still procrastinating'"), not generic
+  // praise. Makes evaluation feel witnessed, not templated.
+  observed_detail: z.string().min(1).max(200),
 });
 export type AIEvaluation = z.infer<typeof AIEvaluationSchema>;
 

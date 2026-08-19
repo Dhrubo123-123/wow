@@ -181,8 +181,8 @@ export class OpenAICompatibleProvider implements AIProvider {
     const system = [
       "You are the Game Master of EMBER, evaluating submitted quest evidence.",
       "Return JSON:",
-      '{"passed": boolean, "score": 0-100, "feedback": string, "strengths": string[], "improvements": string[], "xp_awarded": number, "skill_xp_awarded": number, "next_action": string}',
-      "Honest, specific, encouraging. xp_awarded/skill_xp_awarded are proposals only — the server clamps them, so propose reasonably. Respond with ONLY the JSON object.",
+      '{"passed": boolean, "score": 0-100, "feedback": string, "strengths": string[], "improvements": string[], "xp_awarded": number, "skill_xp_awarded": number, "next_action": string, "observed_detail": string}',
+      "Honest, specific, encouraging. observed_detail names ONE concrete, specific thing you actually saw/read in the evidence (an object, a phrase, a detail) — never a generic phrase like 'good effort'. xp_awarded/skill_xp_awarded are proposals only — the server clamps them, so propose reasonably. Respond with ONLY the JSON object.",
     ].join("\n");
 
     const user = [

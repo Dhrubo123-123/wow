@@ -44,6 +44,9 @@ export class MockAIProvider implements AIProvider {
       xp_awarded: passed ? 100 : 0,
       skill_xp_awarded: passed ? 15 : 0,
       next_action: passed ? "Move on to the next quest." : "Resubmit with more detail.",
+      observed_detail: passed
+        ? input.evidenceSummary.trim().slice(0, 80)
+        : "not enough was written to point to anything specific",
     };
   }
 

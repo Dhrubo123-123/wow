@@ -192,6 +192,16 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
           variant: "warning",
         });
       } else {
+        // Roadmap item 3 — the "evaluation ceremony": before the
+        // pass/fail verdict, name the one concrete thing the GM
+        // actually saw. Makes the review feel witnessed, not templated.
+        if (result.observedDetail) {
+          toast({
+            title: "👁 The Game Master noticed…",
+            description: result.observedDetail,
+            variant: "default",
+          });
+        }
         toast({
           title: result.passed ? "Quest complete! 🎉" : "Not quite there yet",
           description: result.feedback,

@@ -1,14 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
-import { getAIProvider, AIProviderError, type QuestGeneration } from "@/lib/ai";
+import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/progression";
-import { matchSkillId } from "./matchSkill";
 import { logError } from "@/lib/observability/logger";
 import { logEvent } from "@/lib/events/log";
 import { EVENT } from "@/lib/events/names";
-import { checkBudget } from "@/lib/ai/budget";
-import { getCachedQuestTemplate, cacheQuestTemplate, inferCategory, personalizeTemplate } from "@/lib/ai/questCache";
+import { generateNextQuest } from "./generateNext";
 
 // Server-enforced ceiling — the AI's proposal is never trusted outright
 // (brief §14/§22: "AI must not be allowed to award unlimited XP").
@@ -20,6 +18,9 @@ export interface QuestEvaluationResult {
   feedback: string;
   strengths: string[];
   improvements: string[];
+  // Roadmap item 3 — the ceremony's one concrete, specific line naming
+  // something the GM actually saw/read, not generic praise.
+  observedDetail: string;
   xpAwarded: number;
   leveledUp: boolean;
   newLevel: number | null;
@@ -203,56 +204,10 @@ export async function runQuestEvaluation(
     await grant("FIRST_WIN");
 
     if (quest.goal_id && goal?.title) {
-      try {
-        const category = inferCategory(goal.title);
-        const difficulty = quest.difficulty ?? 1;
-        const cachedTemplate = await getCachedQuestTemplate(admin, category, difficulty);
-        let nextQuest: QuestGeneration;
-
-        if (cachedTemplate) {
-          nextQuest = personalizeTemplate(cachedTemplate, goal.title);
-          await logEvent(admin, userId, EVENT.AI_CALL_LOGGED, {
-            purpose: "quest_generation",
-            cacheHit: true,
-            outcome: "success",
-          });
-        } else {
-          const genBudget = await checkBudget(admin, userId, "quest_generations");
-          if (!genBudget.allowed) {
-            throw new Error("quest_generations budget exhausted — skipping next-quest generation");
-          }
-          nextQuest = await getAIProvider().generateQuest(
-            {
-              goalTitle: goal.title,
-              primaryObjective: null,
-              occupation: null,
-              skillLevel: 1,
-              recentQuestTitles: [quest.title],
-            },
-            { userId, admin },
-          );
-          void cacheQuestTemplate(admin, category, difficulty, nextQuest);
-        }
-
-        await admin.from("quests").insert({
-          user_id: userId,
-          goal_id: quest.goal_id,
-          skill_id: await matchSkillId(admin, nextQuest.skill),
-          title: nextQuest.title,
-          description: `${nextQuest.description}\n\nSkill focus: ${nextQuest.skill}`,
-          objective: nextQuest.objective,
-          difficulty: nextQuest.difficulty,
-          estimated_minutes: nextQuest.estimated_minutes,
-          xp_reward: Math.min(nextQuest.xp_reward, 500),
-          evidence_required: nextQuest.evidence_required,
-          evidence_type: nextQuest.evidence_type,
-          success_criteria: nextQuest.success_criteria as Json,
-          instructions: nextQuest.instructions as Json,
-          status: "available",
-        });
-      } catch (err) {
-        logError("goal_plan", err, { userId, goalId: quest.goal_id });
-      }
+      // Roadmap item 3 — "next quest revealed after every evaluation".
+      // Shared with the expiry-refresh path (lib/quests/today.ts) so
+      // there's exactly one implementation of "make the next quest".
+      await generateNextQuest(admin, userId, { id: quest.goal_id, title: goal.title }, quest.title, quest.difficulty ?? 1);
     }
   }
 
@@ -262,6 +217,7 @@ export async function runQuestEvaluation(
     feedback: evaluation.feedback,
     strengths: evaluation.strengths,
     improvements: evaluation.improvements,
+    observedDetail: evaluation.observed_detail,
     xpAwarded: clampedXp,
     leveledUp,
     newLevel,

@@ -20,7 +20,11 @@ export type QuestStatus =
   | "submitted"
   | "under_review"
   | "completed"
-  | "failed";
+  | "failed"
+  // Roadmap item 3 — ran out of the 24h "today" window unclaimed/
+  // unfinished. Never a penalty (distinct from "failed"); replaced by
+  // a fresh quest — see lib/quests/today.ts.
+  | "expired";
 
 export type QuestAttemptStatus = "in_progress" | "submitted" | "completed" | "failed";
 export type EvidenceType = "text" | "image" | "file" | "url";
@@ -156,6 +160,7 @@ export interface Database {
           instructions: Json;
           status: QuestStatus;
           ai_raw_response: Json | null;
+          expires_at: string;
           created_at: string;
           updated_at: string;
         },
@@ -176,6 +181,7 @@ export interface Database {
           instructions?: Json;
           status?: QuestStatus;
           ai_raw_response?: Json | null;
+          expires_at?: string;
         }
       >;
       quest_attempts: Table<

@@ -41,7 +41,8 @@ export type LogScope =
   | "goal_plan"
   | "mentor"
   | "upload"
-  | "db";
+  | "db"
+  | "quest_generation";
 
 export function logError(scope: LogScope, error: unknown, meta?: Record<string, unknown>) {
   const message = error instanceof Error ? error.message : String(error);

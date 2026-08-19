@@ -12,6 +12,7 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
   under_review: "Under Review",
   completed: "Completed",
   failed: "Failed",
+  expired: "Expired",
 };
 
 const STATUS_ORDER: QuestStatus[] = [
@@ -22,6 +23,7 @@ const STATUS_ORDER: QuestStatus[] = [
   "under_review",
   "completed",
   "failed",
+  "expired",
 ];
 
 export default async function QuestsPage() {

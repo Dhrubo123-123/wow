@@ -20,6 +20,8 @@ export const EVENT = {
   // AI-budget protection (roadmap item A) — one call, one event, from
   // every Groq request routed through lib/ai/gateway.ts.
   AI_CALL_LOGGED: "ai_call_logged",
+  // Roadmap item 3 — "Today" screen quest lifecycle.
+  QUEST_EXPIRED: "quest_expired",
   PAYWALL_SHOWN: "paywall_shown",
   PAYWALL_CLICKED: "paywall_clicked",
   PAYMENT_CAPTURED: "payment_captured",
