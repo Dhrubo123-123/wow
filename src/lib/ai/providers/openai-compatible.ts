@@ -28,6 +28,18 @@ interface ChatMessage {
 
 type Purpose = "quest_generation" | "evaluation" | "mentor" | "difficulty_adjustment";
 
+// Roadmap item A2: every call now has a hard max_tokens ceiling — there
+// wasn't one before, which meant a single verbose completion could cost
+// far more than the ~900 tokens these tasks actually need. Sized to the
+// JSON shape each call returns (evaluation has the most fields, mentor
+// the least).
+const MAX_TOKENS: Record<Purpose, number> = {
+  quest_generation: 550,
+  evaluation: 500,
+  mentor: 350,
+  difficulty_adjustment: 150,
+};
+
 export interface OpenAICompatibleConfig {
   /** Shown in error messages / logs so multi-provider failures are traceable. */
   providerName: string;
@@ -65,6 +77,7 @@ export class OpenAICompatibleProvider implements AIProvider {
           messages,
           response_format: { type: "json_object" },
           temperature: 0.7,
+          max_tokens: MAX_TOKENS[purpose],
         },
         purpose,
         userId: ctx?.userId ?? null,
@@ -121,7 +134,7 @@ export class OpenAICompatibleProvider implements AIProvider {
         messages.push({
           role: "user",
           content:
-            "That was not valid JSON. Respond again with ONLY a single valid JSON object matching the requested schema — no markdown, no commentary.",
+            "Not valid JSON. Respond again with ONLY a single valid JSON object — no markdown, no commentary.",
         });
         continue;
       }
@@ -132,7 +145,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       messages.push({ role: "assistant", content: raw });
       messages.push({
         role: "user",
-        content: `Your JSON did not match the required schema: ${result.error.message}. Respond again with ONLY a corrected JSON object.`,
+        content: `Schema mismatch: ${result.error.message}. Respond again with ONLY a corrected JSON object.`,
       });
     }
 
@@ -143,11 +156,10 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async generateQuest(input: GenerateQuestInput, ctx?: AICallContext): Promise<QuestGeneration> {
     const system = [
-      "You are the Game Master of EMBER, an app that turns real-life goals into RPG quests.",
-      "Generate exactly ONE quest as a single JSON object with this shape:",
+      "You are the Game Master of EMBER — real-life goals become RPG quests.",
+      "Generate ONE quest as JSON:",
       '{"title": string, "description": string, "objective": string, "difficulty": 1-5, "estimated_minutes": number, "skill": string, "xp_reward": number, "evidence_required": boolean, "evidence_type": "text"|"image"|"file"|"url", "success_criteria": string[], "instructions": string[]}',
-      "The quest must be a concrete, achievable real-world action — not vague advice.",
-      "Respond with ONLY the JSON object.",
+      "Concrete, achievable, real-world action — not vague advice. Respond with ONLY the JSON object.",
     ].join("\n");
 
     const user = [
@@ -168,10 +180,9 @@ export class OpenAICompatibleProvider implements AIProvider {
   async evaluateQuest(input: EvaluateQuestInput, ctx?: AICallContext): Promise<AIEvaluation> {
     const system = [
       "You are the Game Master of EMBER, evaluating submitted quest evidence.",
-      "Return a single JSON object with this shape:",
+      "Return JSON:",
       '{"passed": boolean, "score": 0-100, "feedback": string, "strengths": string[], "improvements": string[], "xp_awarded": number, "skill_xp_awarded": number, "next_action": string}',
-      "Be honest, specific, and encouraging. xp_awarded and skill_xp_awarded are your proposal only — the server independently clamps them against a maximum, so propose a reasonable value, not an inflated one.",
-      "Respond with ONLY the JSON object.",
+      "Honest, specific, encouraging. xp_awarded/skill_xp_awarded are proposals only — the server clamps them, so propose reasonably. Respond with ONLY the JSON object.",
     ].join("\n");
 
     const user = [
@@ -189,11 +200,10 @@ export class OpenAICompatibleProvider implements AIProvider {
   async generateGoalPlan(input: GenerateGoalPlanInput, ctx?: AICallContext): Promise<GoalPlan> {
     const system = [
       "You are the Game Master of EMBER, decomposing a user's goal into a plan.",
-      "Return a single JSON object with this shape:",
+      "Return JSON:",
       '{"milestones": string[], "weekly_objectives": string[], "initial_quests": QuestGeneration[]}',
-      "Each item in initial_quests has the shape: {title, description, objective, difficulty(1-5), estimated_minutes, skill, xp_reward, evidence_required, evidence_type, success_criteria, instructions}.",
-      "Generate ONLY the next useful set of quests (1-3) — never generate hundreds of quests at once.",
-      "Respond with ONLY the JSON object.",
+      "Each initial_quests item: {title, description, objective, difficulty(1-5), estimated_minutes, skill, xp_reward, evidence_required, evidence_type, success_criteria, instructions}.",
+      "ONLY the next useful set of quests (1-3), never hundreds. Respond with ONLY the JSON object.",
     ].join("\n");
 
     const user = [
@@ -209,11 +219,16 @@ export class OpenAICompatibleProvider implements AIProvider {
   }
 
   async generateMentorResponse(input: MentorContext, ctx?: AICallContext): Promise<string> {
+    // Note on "trim mentor history to last 4 turns" (roadmap item A2):
+    // there is no conversation history in this prompt at all — each
+    // question has always been answered fresh from compact profile
+    // context (name/level/xp/goal/recent quests), never from prior
+    // chat turns. Nothing to trim; already the minimum. If turn-based
+    // memory is added later, cap it at 4 turns then.
     const system = [
-      "You are the AI Mentor in EMBER, a real-life RPG app. Answer the user's question directly and helpfully.",
-      'Return a single JSON object: {"message": string}.',
-      "Base your answer only on the compact context provided — do not invent facts about the user.",
-      "Respond with ONLY the JSON object.",
+      "You are the AI Mentor in EMBER. Answer directly and helpfully.",
+      'Return JSON: {"message": string}.',
+      "Use only the compact context given — never invent facts about the user. Respond with ONLY the JSON object.",
     ].join("\n");
 
     const user = [
@@ -241,8 +256,7 @@ export class OpenAICompatibleProvider implements AIProvider {
   async adjustDifficulty(input: AdjustDifficultyInput, ctx?: AICallContext): Promise<DifficultyAdjustment> {
     const system = [
       "You are EMBER's adaptive difficulty engine.",
-      'Return a single JSON object: {"difficulty": 1-5, "reason": string}.',
-      "Respond with ONLY the JSON object.",
+      'Return JSON: {"difficulty": 1-5, "reason": string}. Respond with ONLY the JSON object.',
     ].join("\n");
 
     const user = [

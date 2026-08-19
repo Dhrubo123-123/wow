@@ -106,10 +106,20 @@ const ORG_BUDGET_DEGRADE_THRESHOLD = 0.9; // ">90% daily model budget"
 
 /**
  * The actual binding constraint, per the brief: Groq's RPD is shared
- * across the WHOLE org, not per-user (see limits.ts). This counts
- * today's ai_call_logged events for `model` across every user and
- * compares against that model's real RPD — independent of, and
- * checked in addition to, any single user's own per-user budget.
+ * across the WHOLE org, not per-user (see limits.ts) — checked
+ * independent of, and in addition to, any single user's own per-user
+ * budget.
+ *
+ * Also checks TPD, not just RPD — added after this app's own
+ * capacity-analysis script (scripts/load-test-ai-budget.mjs) found TPD
+ * is the ACTUAL binding constraint for the vision model specifically:
+ * one Live Coach session costs ~37,000 tokens (20 snapshots × ~1850
+ * each), so the org can sustain only ~5 full sessions/day before
+ * hitting TPD (200,000) — RPD (1000) would never be the thing that
+ * stops it. Checking RPD alone would have let TPD blow past 500%+ of
+ * budget while this function kept saying "fine". Whichever ceiling is
+ * closer is the one that matters, so both are checked and either one
+ * tripping triggers degradation.
  */
 export async function isOrgBudgetNearlyExhausted(
   admin: SupabaseClient<Database>,
@@ -118,13 +128,20 @@ export async function isOrgBudgetNearlyExhausted(
   const today = todayUTC();
   const startOfDay = `${today}T00:00:00.000Z`;
 
-  const { count } = await admin
+  const { data, count } = await admin
     .from("events")
-    .select("id", { count: "exact", head: true })
+    .select("props", { count: "exact" })
     .eq("name", EVENT.AI_CALL_LOGGED)
     .gte("created_at", startOfDay)
     .contains("props", { model });
 
   const used = count ?? 0;
-  return used >= GROQ_LIMITS[model].rpd * ORG_BUDGET_DEGRADE_THRESHOLD;
+  const limits = GROQ_LIMITS[model];
+  if (used >= limits.rpd * ORG_BUDGET_DEGRADE_THRESHOLD) return true;
+
+  const tokensUsed = (data ?? []).reduce((sum, row) => {
+    const tokens = (row.props as { tokens?: number } | null)?.tokens;
+    return sum + (typeof tokens === "number" ? tokens : 0);
+  }, 0);
+  return tokensUsed >= limits.tpd * ORG_BUDGET_DEGRADE_THRESHOLD;
 }

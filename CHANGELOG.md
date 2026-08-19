@@ -2,6 +2,42 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Roadmap item A2: right-size the AI budget for ~10 trial users
+
+Target changed from ~200 users to ~10 concurrent trial users with FULL
+(unlimited mentor/coach) access — re-ran the capacity analysis against
+the new, harder target rather than assuming item A's numbers still held.
+
+- Every AI call now has an explicit `max_tokens` ceiling (there wasn't
+  one before) — 550/500/350/150 for quest-gen/evaluation/mentor/
+  difficulty-adjustment, sized to each call's actual JSON shape.
+- "Trim mentor history to last 4 turns": turned out to be N/A — the
+  mentor prompt never included prior conversation turns to begin with,
+  only compact profile context. Documented rather than silently
+  skipped, so it doesn't look like an oversight.
+- Re-ran `scripts/load-test-ai-budget.mjs` for 10 users, "unlimited"
+  trial usage, light + heavy scenarios. **Text model (quest-gen/eval/
+  mentor): comfortable >=25%+ margin on both RPD and TPD in every
+  scenario — no smaller-model swap needed**, the brief's fallback
+  condition never triggered.
+- **Found a real gap the RPD-only gate had been blind to**: the vision
+  model's binding constraint is TPD, not RPD — one Live Coach session
+  costs ~37,000 tokens (20 snapshots × ~1850), so the org can sustain
+  only ~5 full sessions/day (200,000 TPD / 37,000) regardless of the
+  1000/day RPD ceiling. At 10 users, even the *light* usage scenario
+  (1 session/user/day) hit 185% of TPD while RPD read a reassuring 20%.
+  **Fixed**: `isOrgBudgetNearlyExhausted` now checks both RPD and TPD
+  (summing real logged token counts from `ai_call_logged` events) and
+  degrades on whichever ceiling is closer — this is what makes
+  "unlimited" Live Coach in the trial actually safe: unlimited in
+  principle, gated by real shared capacity in practice, always a clean
+  "at capacity" response rather than a raw API error.
+- `npm run lint`, `npm run build`, `npm test` (39/39) pass. Verified
+  live: a real mentor call through the dev server logged 474 real
+  tokens (previously uncapped calls ran unbounded) — confirms the cap
+  is actually being sent to and honored by Groq, not just present in
+  the request body unused.
+
 ## Post-launch — Roadmap item A: protect the AI budget for ~200 users
 
 Groq's free tier (`lib/ai/limits.ts`, read from console.groq.com/docs/
