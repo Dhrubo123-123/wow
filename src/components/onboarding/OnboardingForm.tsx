@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Card, useToast } from "@/components/ui";
+import { track } from "@/lib/events/track";
+import { EVENT } from "@/lib/events/names";
 
 const LANGUAGES = [
   { value: "en", label: "English" },
@@ -48,6 +50,10 @@ export function OnboardingForm({
   const [skillLevel, setSkillLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    track(EVENT.ONBOARDING_STARTED);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -118,6 +124,7 @@ export function OnboardingForm({
       });
     }
 
+    track(EVENT.ONBOARDING_COMPLETED);
     setLoading(false);
     router.push("/dashboard");
     router.refresh();

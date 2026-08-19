@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { nextStreakState } from "./streakLogic";
+import { logEvent } from "@/lib/events/log";
+import { EVENT } from "@/lib/events/names";
 
 function todayUTC(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -62,5 +64,38 @@ export async function updateStreak(admin: SupabaseClient<Database>, userId: stri
     freezesAvailable: result.freezesAvailable,
     freezeUsed: result.freezeUsed,
     streakEarnedBack: result.streakEarnedBack,
+    // Non-null here means a *new* earn-back window just opened this
+    // update — distinct from streakEarnedBack (which means an
+    // existing window was just successfully redeemed).
+    earnbackWindowOpened: result.lastStreakBeforeBreak !== null,
   };
+}
+
+/**
+ * Streak updates only run when a quest is *completed* — so an
+ * earn-back window that the user simply never redeems has no natural
+ * moment to notice it expired. Called lazily from the dashboard's own
+ * read path instead of a cron job: cheap, no infra, and correct within
+ * one page load of the window actually closing (a day or two of lag
+ * on the analytics event is fine for this — it's a metric, not a
+ * user-facing consequence).
+ */
+export async function expireEarnbackIfPast(admin: SupabaseClient<Database>, userId: string) {
+  const today = todayUTC();
+
+  const { data: existing } = await admin
+    .from("streaks")
+    .select("last_streak_before_break, streak_break_expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!existing?.last_streak_before_break || !existing.streak_break_expires_at) return;
+  if (existing.streak_break_expires_at >= today) return; // still valid
+
+  await admin
+    .from("streaks")
+    .update({ last_streak_before_break: null, streak_break_expires_at: null })
+    .eq("user_id", userId);
+
+  await logEvent(admin, userId, EVENT.EARNBACK_EXPIRED, {});
 }

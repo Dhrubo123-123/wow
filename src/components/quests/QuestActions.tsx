@@ -8,6 +8,8 @@ import { CameraCapture } from "@/components/camera/CameraCapture";
 import { LiveCoach } from "@/components/camera/LiveCoach";
 import { useSoundPreference } from "@/lib/audio/useSoundPreference";
 import { narrate } from "@/lib/audio/narration";
+import { track } from "@/lib/events/track";
+import { EVENT } from "@/lib/events/names";
 import type { EvidenceType, QuestStatus } from "@/lib/quests";
 
 interface QuestActionsProps {
@@ -75,6 +77,11 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
       return;
     }
     narrate("questAccepted", soundEnabled, lang);
+    // Named "first_quest_accepted" in the event vocabulary, but fired
+    // on every accept — true "first" semantics are derived downstream
+    // (MIN(created_at) per user) rather than gated here, to avoid an
+    // extra round trip on every single accept just to check history.
+    track(EVENT.FIRST_QUEST_ACCEPTED, { questId });
     router.refresh();
   }
 
@@ -168,6 +175,7 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
     }
 
     toast({ title: "Submitted!", description: "The Game Master is reviewing your evidence…" });
+    track(EVENT.EVIDENCE_SUBMITTED, { questId, evidenceType: isImageEvidence ? "image" : "text" });
     narrate("questSubmitted", soundEnabled, lang);
 
     // Phase 14: evaluate immediately rather than leaving the user

@@ -39,7 +39,6 @@ interface Table<Row, Insert, Update = Partial<Insert>> {
 export interface Database {
   public: {
     Views: Record<string, never>;
-    Functions: Record<string, never>;
     Tables: {
       profiles: Table<
         {
@@ -366,6 +365,36 @@ export interface Database {
           settings?: Json;
         }
       >;
+      events: Table<
+        {
+          id: string;
+          user_id: string | null;
+          name: string;
+          props: Json;
+          created_at: string;
+        },
+        {
+          user_id: string;
+          name: string;
+          props?: Json;
+        }
+      >;
+    };
+    Functions: {
+      admin_retention_cohorts: {
+        Args: Record<string, never>;
+        Returns: {
+          cohort_date: string;
+          cohort_size: number;
+          d1_retained: number;
+          d7_retained: number;
+          d30_retained: number;
+        }[];
+      };
+      admin_streak_distribution: {
+        Args: Record<string, never>;
+        Returns: { streak_bucket: string; sort_order: number; user_count: number }[];
+      };
     };
   };
 }

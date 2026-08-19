@@ -2,6 +2,47 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Retention roadmap §0: instrumentation
+
+First of the 8-item retention roadmap, done in the requested order:
+one item, verified, one commit, then a pause for a decision before the
+next. This item is the measurement instrument every later item gets
+judged against.
+
+- New `events` table (append-only, RLS insert/select-own) + the full
+  event vocabulary in `lib/events/names.ts`: onboarding_started/
+  completed, first_quest_accepted, evidence_submitted,
+  evaluation_returned, streak_extended, freeze_consumed,
+  earnback_started/succeeded/expired (party/kudos names reserved for
+  §7, not wired up yet).
+- Two Postgres RPCs (`admin_retention_cohorts`, `admin_streak_distribution`)
+  do the actual cohort math in SQL rather than the app — `security
+  definer` so they can read `auth.users`, called only from the
+  service-role admin client, never exposed to `anon`/`authenticated`.
+- `lib/events/log.ts` (server, best-effort, never breaks the action
+  it's attached to) and `lib/events/track.ts` (client, fire-and-forget
+  `fetch` with `keepalive`) — plus `POST /api/events` for client-
+  triggered events, running under the caller's own RLS session.
+- `earnback_expired` has no natural trigger moment (streak updates
+  only run on quest completion, so a window nobody redeems just sits
+  there) — handled with a lazy check on dashboard load
+  (`expireEarnbackIfPast`) instead of standing up a cron job for one
+  metric.
+- New `/admin/metrics` page: D1/D7/D30 retention by signup cohort +
+  streak-length distribution. Gated by an `ADMIN_EMAILS` allowlist
+  (plain env var, not a role column/table — right-sized for one or two
+  people needing this, not a permissions system). Not linked from
+  anywhere in the app.
+- Verified live end-to-end, not just compiled: posted a real event
+  through the running dev server with a real session, confirmed it
+  landed in the database, and called both RPCs directly — cohort/
+  distribution numbers came back correctly (small/zero right now since
+  the events table only starts collecting from this deploy forward,
+  exactly as expected).
+- `npm run lint`, `tsc --noEmit`, `npm run build`, `npm test` (32/32,
+  unchanged — this item added no pure-logic to unit test, it's
+  plumbing) all pass.
+
 ## Post-launch — Retention roadmap + streak freeze/earn-back (research-backed)
 
 User brought back sourced research (Duolingo's own blog/PM interviews,

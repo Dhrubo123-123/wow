@@ -6,6 +6,8 @@ import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/p
 import { matchSkillId } from "@/lib/quests";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logError } from "@/lib/observability/logger";
+import { logEvent } from "@/lib/events/log";
+import { EVENT } from "@/lib/events/names";
 import type { Json } from "@/lib/supabase/types";
 
 // Server-enforced ceilings — the AI's proposal is never trusted outright
@@ -120,6 +122,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const clampedXp = Math.max(0, Math.min(evaluation.xp_awarded, quest.xp_reward));
   const clampedSkillXp = Math.max(0, Math.min(evaluation.skill_xp_awarded, MAX_SKILL_XP));
 
+  await logEvent(admin, userId, EVENT.EVALUATION_RETURNED, {
+    questId,
+    passed: evaluation.passed,
+    score: evaluation.score,
+  });
+
   const { error: evalInsertError } = await admin.from("ai_evaluations").insert({
     quest_attempt_id: attempt.id,
     user_id: userId,
@@ -195,6 +203,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     streak = await updateStreak(admin, userId);
     if (streak.currentStreak >= 3) await grant("STREAK_3");
     if (streak.currentStreak >= 7) await grant("STREAK_7");
+
+    if (streak.freezeUsed) {
+      await logEvent(admin, userId, EVENT.FREEZE_CONSUMED, { newStreak: streak.currentStreak });
+    } else if (streak.streakEarnedBack) {
+      await logEvent(admin, userId, EVENT.EARNBACK_SUCCEEDED, { restoredStreak: streak.currentStreak });
+    } else if (streak.earnbackWindowOpened) {
+      await logEvent(admin, userId, EVENT.EARNBACK_STARTED, {});
+    } else {
+      await logEvent(admin, userId, EVENT.STREAK_EXTENDED, { currentStreak: streak.currentStreak });
+    }
 
     await grant("FIRST_WIN");
 

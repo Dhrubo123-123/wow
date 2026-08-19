@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { expireEarnbackIfPast } from "@/lib/progression";
 import {
   Avatar,
   Badge,
@@ -42,6 +44,12 @@ export default async function DashboardPage() {
     .single();
 
   if (!profile?.onboarding_completed_at) redirect("/onboarding");
+
+  // Best-effort, non-blocking — a lazy check for an earn-back window
+  // that expired unredeemed since the user's last visit (see
+  // expireEarnbackIfPast's doc comment for why this can't just run on
+  // a schedule instead). Never let this delay or fail the page render.
+  void expireEarnbackIfPast(createAdminClient(), user.id).catch(() => {});
 
   const [{ data: goal }, { data: quests }, { data: streak }] = await Promise.all([
     profile.current_goal_id
