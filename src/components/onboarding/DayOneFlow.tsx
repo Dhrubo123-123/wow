@@ -34,12 +34,12 @@ const TIME_OPTIONS = [
  * achievements already earned survive the conversion instead of being
  * created under a throwaway identity and lost).
  */
-export function DayOneFlow() {
+export function DayOneFlow({ resumeStep }: { resumeStep?: "schedule" | null } = {}) {
   const router = useRouter();
   const { toast } = useToast();
   const { enabled: soundEnabled, lang } = useSoundPreference();
 
-  const [step, setStep] = useState<Step>("category");
+  const [step, setStep] = useState<Step>(resumeStep ?? "category");
   const [quest, setQuest] = useState<{ id: string } | null>(null);
   const [template, setTemplate] = useState<StarterQuest | null>(null);
   const [textEvidence, setTextEvidence] = useState("");
