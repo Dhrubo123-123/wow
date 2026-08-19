@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle, ProgressBar } from "@/components/ui";
 import { QuestActions } from "@/components/quests/QuestActions";
 import { QUEST_DIFFICULTY_LABELS, type QuestDifficulty, type QuestStatus, type EvidenceType } from "@/lib/quests";
+import { MASTERY_XP_PER_LEVEL, xpToNextSkillNode } from "@/lib/progression/skills";
 
 export default async function QuestDetailPage({
   params,
@@ -45,6 +46,31 @@ export default async function QuestDetailPage({
   const successCriteria = (quest.success_criteria as string[] | null) ?? [];
   const instructions = (quest.instructions as string[] | null) ?? [];
 
+  // Roadmap item 3 — "how close is this quest to unlocking the next
+  // skill node", shown so the XP reward feels like progress toward
+  // something specific, not just a number going up.
+  let nextUnlock: { skillName: string; xpRemaining: number; xpIntoNode: number } | null = null;
+  if (quest.skill_id) {
+    const [{ data: skill }, { data: userSkill }] = await Promise.all([
+      supabase.from("skills").select("name").eq("id", quest.skill_id).single(),
+      supabase
+        .from("user_skills")
+        .select("xp")
+        .eq("user_id", user.id)
+        .eq("skill_id", quest.skill_id)
+        .maybeSingle(),
+    ]);
+
+    if (skill) {
+      const currentXp = userSkill?.xp ?? 0;
+      nextUnlock = {
+        skillName: skill.name,
+        xpRemaining: xpToNextSkillNode(currentXp),
+        xpIntoNode: currentXp % MASTERY_XP_PER_LEVEL,
+      };
+    }
+  }
+
   return (
     <div className="space-y-4 stagger-children p-4">
       <Card>
@@ -64,6 +90,21 @@ export default async function QuestDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {nextUnlock && (
+        <Card>
+          <CardContent className="space-y-2">
+            <ProgressBar
+              value={nextUnlock.xpIntoNode}
+              max={MASTERY_XP_PER_LEVEL}
+              label={`${nextUnlock.skillName} mastery`}
+            />
+            <p className="text-xs text-muted">
+              {nextUnlock.xpRemaining} XP to the next {nextUnlock.skillName} unlock
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {instructions.length > 0 && (
         <Card>

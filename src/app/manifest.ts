@@ -27,5 +27,20 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    // Roadmap item 3 — long-press the home-screen icon and go straight
+    // to today's quest (which itself opens on the evidence-capture
+    // step, see /quests/today's redirect target), skipping the app
+    // shell entirely. "shortcuts" only shows on platforms that support
+    // it (Android/desktop Chrome); it's a no-op elsewhere, not a
+    // requirement.
+    shortcuts: [
+      {
+        name: "Today's Quest",
+        short_name: "Quest",
+        description: "Jump straight to today's quest and evidence camera.",
+        url: "/quests/today",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+    ],
   };
 }
