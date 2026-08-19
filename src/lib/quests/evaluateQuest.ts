@@ -33,7 +33,7 @@ export interface QuestEvaluationResult {
  * from two places with identical behavior:
  *   1. `POST /api/quests/[id]/evaluate` — the normal synchronous path,
  *      right after a user submits evidence.
- *   2. `GET /api/jobs/process-evaluations` (Vercel Cron, every 10 min)
+ *   2. `GET /api/jobs/process-evaluations` (Vercel Cron, once daily (Vercel Hobby plan limit))
  *      — sweeps any quest left sitting in `submitted` past a grace
  *      window, which is what actually makes roadmap item A's
  *      "graceful degradation" real instead of just an honest message:

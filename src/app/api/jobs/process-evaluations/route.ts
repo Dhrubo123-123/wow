@@ -19,7 +19,7 @@ const STALE_AFTER_MS = 90_000;
 const BATCH_SIZE = 10;
 
 /**
- * Vercel Cron (vercel.json, every 10 min) → roadmap item A3. This is
+ * Vercel Cron (vercel.json, once daily (Vercel Hobby plan limit)) → roadmap item A3. This is
  * what makes the evaluate route's "graceful degradation" a genuine
  * deferred retry instead of just an honest-sounding promise: anything
  * left sitting in `submitted` past the grace window gets a real

@@ -22,7 +22,15 @@ closes that gap for real.
   request — in batches of 10, re-checking the org-wide AI budget
   before every single item (not just once per run) so a mid-sweep
   budget crossing stops spending immediately.
-- `vercel.json`: cron schedule every 10 minutes.
+- `vercel.json`: **real platform constraint found at deploy time** —
+  Vercel's Hobby plan only allows a DAILY cron, not every 10 minutes as
+  originally planned; the first deploy attempt failed outright with a
+  clear error naming the limit. Adjusted to once/day and updated the
+  degraded-evaluation copy to say "within 24 hours" honestly instead of
+  the no-longer-true "within the hour" — this should be a rare path in
+  practice given how wide the text-model budget margin is at 10-user
+  scale (item A2's load test), so the daily cadence is an acceptable
+  real-world tradeoff, not silently swept under the rug.
 - **Verified live, not just built**: manually staged a real stale
   `submitted` quest attempt with real evidence, called the cron
   endpoint with the real secret through the running dev server, and

@@ -73,7 +73,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   // daily limit (RPD or TPD — see isOrgBudgetNearlyExhausted) for the
   // text model, don't call the AI at all. The quest stays "submitted"
   // so the Vercel Cron sweep (roadmap item A3,
-  // /api/jobs/process-evaluations, every 10 min) picks it up and
+  // /api/jobs/process-evaluations, once daily (Vercel Hobby plan limit)) picks it up and
   // completes the real evaluation once capacity is back — this is now
   // a genuine deferred retry, not just an honest-sounding promise.
   const [evalBudget, orgNearLimit] = await Promise.all([
@@ -94,7 +94,15 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       queued: true,
       passed: null,
       feedback:
-        "The Game Master is reviewing a lot of quests right now — your XP will land within the hour. Your streak is already safe.",
+        // Honest about the real cadence: Vercel's Hobby plan only
+        // allows a daily cron (roadmap item A3's process-evaluations
+        // job runs once/day, not every 10 minutes as originally
+        // planned — a real platform limit, not a choice). Given how wide the
+        // text-model budget margin is at 10-user scale (see
+        // scripts/load-test-ai-budget.mjs), this path should be rare;
+        // when it does trigger, "within 24 hours" is what's actually
+        // true, not an optimistic guess.
+        "The Game Master is reviewing a lot of quests right now — your XP will land automatically, usually much sooner, but always within 24 hours. Your streak is already safe.",
       streak,
     });
   }
