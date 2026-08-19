@@ -444,6 +444,47 @@ export interface Database {
           auth_key: string;
         }
       >;
+      parties: Table<
+        {
+          id: string;
+          name: string;
+          invite_code: string;
+          created_by: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          name?: string;
+          invite_code?: string;
+          created_by: string;
+        }
+      >;
+      party_members: Table<
+        {
+          party_id: string;
+          user_id: string;
+          joined_at: string;
+        },
+        {
+          party_id: string;
+          user_id: string;
+        }
+      >;
+      kudos: Table<
+        {
+          id: string;
+          party_id: string;
+          from_user_id: string;
+          to_user_id: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          party_id: string;
+          from_user_id: string;
+          to_user_id: string;
+        }
+      >;
     };
     Functions: {
       admin_retention_cohorts: {

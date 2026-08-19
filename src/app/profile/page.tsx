@@ -123,6 +123,9 @@ export default async function ProfilePage() {
           <Link href="/achievements" className="block text-sm text-primary hover:underline">
             View achievements →
           </Link>
+          <Link href="/party" className="block text-sm text-primary hover:underline">
+            View party →
+          </Link>
         </CardContent>
       </Card>
 
