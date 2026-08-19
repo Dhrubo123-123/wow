@@ -18,7 +18,7 @@ export default async function AchievementsPage() {
   const unlockedMap = new Map((unlocked ?? []).map((u) => [u.achievement_id, u.unlocked_at]));
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 stagger-children p-4">
       <div>
         <h1 className="text-lg font-semibold">Achievements</h1>
         <p className="text-xs text-muted">

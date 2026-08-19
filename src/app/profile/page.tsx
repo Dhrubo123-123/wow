@@ -51,7 +51,7 @@ export default async function ProfilePage() {
   const { xpIntoLevel, xpNeeded } = xpForNextLevel(profile.xp, profile.level);
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 stagger-children p-4">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -75,7 +75,10 @@ export default async function ProfilePage() {
               <Badge>{profile.preferred_language.toUpperCase()}</Badge>
             )}
             <Badge variant="accent">
-              🔥 {streak?.current_streak ?? 0} day streak
+              <span className="animate-flame-flicker" aria-hidden="true">
+                🔥
+              </span>{" "}
+              {streak?.current_streak ?? 0} day streak
             </Badge>
           </div>
         </CardContent>

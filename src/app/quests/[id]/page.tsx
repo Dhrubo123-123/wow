@@ -46,7 +46,7 @@ export default async function QuestDetailPage({
   const instructions = (quest.instructions as string[] | null) ?? [];
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 stagger-children p-4">
       <Card>
         <CardHeader>
           <CardTitle>{quest.title}</CardTitle>

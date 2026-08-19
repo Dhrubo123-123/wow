@@ -46,7 +46,10 @@ export function ProgressBar({
       >
         <div
           className={cn(
-            "h-full rounded-full bg-accent transition-[width] duration-300 ease-out",
+            "bg-gradient-accent relative h-full overflow-hidden rounded-full transition-[width] duration-500 ease-out",
+            // A static bar with no fill reads as "broken", not "empty" —
+            // skip the shimmer sweep entirely rather than run it over nothing.
+            pct > 0 && "animate-shimmer",
             barClassName,
           )}
           style={{ width: `${pct}%` }}

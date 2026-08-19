@@ -20,7 +20,7 @@ export default async function SkillsPage() {
   const progressBySkill = new Map((userSkills ?? []).map((us) => [us.skill_id, us]));
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 stagger-children p-4">
       <div>
         <h1 className="text-lg font-semibold">Skills</h1>
         <p className="text-xs text-muted">

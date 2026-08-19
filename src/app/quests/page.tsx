@@ -43,7 +43,7 @@ export default async function QuestsPage() {
     .sort((a, b) => STATUS_ORDER.indexOf(a.status as QuestStatus) - STATUS_ORDER.indexOf(b.status as QuestStatus));
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 stagger-children p-4">
       <h1 className="text-lg font-semibold">Quests</h1>
 
       {sorted.length === 0 && (

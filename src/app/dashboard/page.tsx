@@ -74,7 +74,7 @@ export default async function DashboardPage() {
   const nextMilestone = aiPlan?.milestones?.[0] ?? null;
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 stagger-children p-4">
       <DashboardWelcomeVoice name={displayName.split(" ")[0] ?? "Adventurer"} />
       <div className="flex items-center gap-3">
         <Avatar name={displayName} src={profile.avatar_url} levelBadge={profile.level} />
@@ -94,7 +94,12 @@ export default async function DashboardPage() {
             label={`Level ${profile.level}`}
             showValue
           />
-          <Badge variant="accent">🔥 {streak?.current_streak ?? 0} day streak</Badge>
+          <Badge variant="accent">
+            <span className="animate-flame-flicker" aria-hidden="true">
+              🔥
+            </span>{" "}
+            {streak?.current_streak ?? 0} day streak
+          </Badge>
         </CardContent>
       </Card>
 

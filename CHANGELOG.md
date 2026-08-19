@@ -2,6 +2,53 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — "It still looks ordinary": ambient motion pass
+
+User feedback after the rebrand, backed by real screenshots of the live
+app: the new logo was premium but every page below it was still flat,
+static, and dead — big empty black spaces, no motion, nothing "alive."
+
+- **Root cause found, not just papered over**: `AppShell`'s wrapper
+  `div` had an opaque `bg-background` class that was painting over the
+  ambient radial-gradient glow already defined on `<body>` — that glow
+  only ever showed on the landing page (which skips AppShell). Every
+  logged-in page was covering its own background decoration. Fixed by
+  making the AppShell wrapper transparent (`relative z-10`, no solid
+  fill) so body's glow shows through everywhere.
+- **New `EmberField`** (`components/branding/EmberField.tsx`): small
+  glowing gold particles drifting up from the bottom of the screen,
+  forever — the app's signature ambient layer, mounted once in the root
+  layout so it's behind every page. Positions are deterministic
+  (index-based integer math, not `Math.random()`) for the same reason
+  the logo emblem needed float-rounding earlier — this is SSR'd, and
+  anything non-deterministic here would hydration-mismatch.
+- **Card entrance animation**: `.stagger-children` (globals.css) fades
+  + rises each direct child in on mount, one after another, instead of
+  everything popping in flat and simultaneous. Applied to every main
+  page's content container (dashboard, quests, quest detail, skills,
+  achievements, profile).
+- **XP bars actually glow now**: `ProgressBar`'s fill switched from a
+  flat `bg-accent` to the gold gradient with a looping shimmer sweep
+  across the filled portion.
+- **Buttons breathe**: the primary CTA's static glow became a slow
+  looping pulse (`animate-glow-pulse`), and every button now has a
+  subtle press-scale (`active:scale-[0.97]`) so taps feel acknowledged.
+- **Streak flame flickers**: the 🔥 in the streak badge (dashboard,
+  profile) now has a small continuous scale/rotate flicker instead of
+  sitting static.
+- All of the above sits inside the existing global
+  `prefers-reduced-motion` rule (already in globals.css from Phase 15),
+  so it's automatically disabled for anyone who's asked for less motion
+  — nothing new to wire up there.
+- Verified live: caught and correctly diagnosed a false alarm mid-way
+  through — a screenshot taken ~1s after navigation showed "empty"
+  pages, which looked like a bug but was actually just catching the new
+  fade-in animation before it finished; a direct DOM/computed-style
+  query confirmed every element was present, positioned, and at
+  opacity 1, and a screenshot taken a beat later showed everything
+  fully rendered. `npm run lint`, `tsc --noEmit`, `npm run build`, and
+  `npm test` (24/24) all pass.
+
 ## Post-launch — Rebrand: ASCEND → EMBER, golden emblem + wordmark
 
 User feedback: the plain gradient-text "ASCEND" logo didn't feel like a

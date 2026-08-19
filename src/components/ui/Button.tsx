@@ -12,8 +12,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
+  // animate-glow-pulse is gold (matches the brand's reward color) even
+  // on the indigo/cyan primary gradient — a CTA breathing gently reads
+  // as "worth tapping" in a way a static button never does.
   primary:
-    "bg-gradient-primary text-primary-foreground glow-primary hover:brightness-110 active:brightness-95",
+    "bg-gradient-primary text-primary-foreground animate-glow-pulse hover:brightness-110 active:brightness-95",
   secondary:
     "bg-surface-raised text-foreground border border-border hover:border-primary/50 hover:bg-surface-raised/70",
   ghost: "bg-transparent text-foreground hover:bg-surface-raised/60",
@@ -51,9 +54,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         className={cn(
           "inline-flex items-center justify-center rounded-md font-medium",
-          "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2",
+          "transition-[colors,transform] duration-150 focus-visible:outline-none focus-visible:ring-2",
           "focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          "disabled:opacity-50 disabled:pointer-events-none",
+          "active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && "w-full",

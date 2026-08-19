@@ -31,7 +31,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname !== "/" && !SHELL_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p));
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-background">
+    // Deliberately no solid background here — this used to be opaque
+    // `bg-background`, which painted over both the ambient gradient glow
+    // (defined on <body>) and the EmberField particle layer on every
+    // logged-in page, the actual reason the app felt flat past login
+    // while the landing page (which skips AppShell) didn't. `relative
+    // z-10` just lifts real content above the fixed EmberField layer.
+    <div className="relative z-10 mx-auto flex min-h-dvh max-w-md flex-col">
       <main className={showNav ? "flex-1 pb-20" : "flex-1"}>
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>

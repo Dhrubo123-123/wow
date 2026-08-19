@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { AppShell } from "@/components/AppShell";
 import { PWAProvider } from "@/components/pwa/PWAProvider";
+import { EmberField } from "@/components/branding/EmberField";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
+        <EmberField />
         <ToastProvider>
           <AppShell>{children}</AppShell>
           <PWAProvider />
