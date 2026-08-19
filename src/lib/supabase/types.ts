@@ -54,6 +54,8 @@ export interface Database {
           onboarding_completed_at: string | null;
           created_at: string;
           updated_at: string;
+          preferred_quest_time: string | null;
+          starter_quest_completed_at: string | null;
         },
         {
           id: string;
@@ -66,6 +68,8 @@ export interface Database {
           xp?: number;
           current_goal_id?: string | null;
           onboarding_completed_at?: string | null;
+          preferred_quest_time?: string | null;
+          starter_quest_completed_at?: string | null;
         }
       >;
       goals: Table<

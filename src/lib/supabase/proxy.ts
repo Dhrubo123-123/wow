@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./types";
 
 // Routes reachable without an authenticated session.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/offline"];
+// "/onboarding" is here deliberately (roadmap item 2): the day-one flow
+// establishes its OWN anonymous session client-side rather than
+// requiring one to already exist — a visitor with literally no session
+// is exactly who that page is for, not something to redirect away.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/offline", "/onboarding"];
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true;

@@ -2,6 +2,56 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Roadmap item 2: day-one guaranteed win
+
+The single most important first session in the app: category → 3-minute
+starter quest → evidence → deterministic pass → XP → level 2 → skill
+lit → "First Ember" achievement, all with zero account creation up
+front and zero AI cost.
+
+- Enabled Supabase anonymous auth (`external_anonymous_users_enabled`)
+  after an explicit RLS audit — grepped every migration for
+  role-based policies and confirmed anon sessions already satisfy
+  `auth.uid() = user_id` / `auth.role() = 'authenticated'` with no
+  policy changes needed. `on_auth_user_created` trigger already
+  auto-creates a `profiles` row for any new `auth.users` insert,
+  anonymous included.
+- `0010_day_one_onboarding.sql`: `profiles.preferred_quest_time`,
+  `profiles.starter_quest_completed_at`, and the `FIRST_EMBER`
+  achievement.
+- `lib/onboarding/starterQuests.ts` — a hand-authored, zero-AI quest
+  bank (one quest per goal category) with a deterministic pass bar
+  (`evidenceMeetsStarterBar`): any photo passes, text needs ≥8 chars.
+  Deliberate: the very first evaluation a brand-new user ever sees
+  must never be slow, cost AI budget, or risk rejecting their first
+  real effort. Real AI evaluation starts on quest 2.
+- `POST /api/onboarding/start` — IP rate-limited (20/24h), creates the
+  goal/quest/attempt from the static template.
+- `POST /api/onboarding/complete-starter` — validates evidence,
+  awards `STARTER_QUEST_XP` (= exactly the XP needed for level 2),
+  lights the mapped skill, updates streak, grants FIRST_QUEST /
+  FIRST_WIN / FIRST_EMBER, logs `evaluation_returned` with
+  `starter: true`.
+- `POST /api/onboarding/schedule` — saves `preferred_quest_time`.
+- `components/onboarding/DayOneFlow.tsx` — full client flow
+  (category → quest → celebration → schedule → sealed-tomorrow), 
+  establishes an anonymous session on mount if none exists, converts
+  to a real account via `supabase.auth.updateUser({email, password})`
+  on the SAME session at the end (preserves `auth.uid()` so XP/streak/
+  events already written stay attached) — with an explicit "continue
+  without saving" escape hatch if the user declines.
+- `/onboarding` no longer redirects unauthenticated visitors to
+  `/login` (it IS the entry point for zero-session visitors) and was
+  added to `proxy.ts`'s public-path allowlist. Landing page primary
+  CTA now points here instead of `/signup`.
+- Fixed a TS18047 build error the same way as an earlier known
+  pattern in this codebase: capture `const userId = user.id` once
+  right after the null-guard, since TS can't narrow `user` across the
+  `grant()` closure defined later in the same handler.
+- Verified live: typecheck, lint, and all 39 unit tests pass; a real
+  anon session was driven through the whole flow end-to-end against
+  the dev server (see next commit note for the browser-driven proof).
+
 ## Post-launch — Roadmap item A3: Vercel Cron actually processes queued evaluations
 
 Item A's graceful degradation shipped an honest "reviewing — XP within

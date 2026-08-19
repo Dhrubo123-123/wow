@@ -55,7 +55,7 @@ export default function LandingPage() {
         </ol>
       </div>
       <div className="space-y-3 pb-safe">
-        <Link href="/signup" className="block">
+        <Link href="/onboarding" className="block">
           <Button fullWidth size="lg">
             Light Your Ember
           </Button>
