@@ -15,6 +15,16 @@ function isPublicPath(pathname: string) {
   if (pathname === "/sw.js") return true;
   if (pathname === "/apple-touch-icon.png") return true;
   if (pathname.startsWith("/icons/")) return true;
+  // SEO/crawler-facing routes — these were being 307'd to /login,
+  // which meant every search engine, social-share unfurl, and answer
+  // engine hit a login redirect instead of the actual content. Found
+  // live while verifying the SEO pass just shipped, not caught by any
+  // earlier check because none of them exercise an unauthenticated
+  // crawler hitting these specific paths.
+  if (pathname === "/robots.txt") return true;
+  if (pathname === "/sitemap.xml") return true;
+  if (pathname === "/llms.txt") return true;
+  if (pathname === "/opengraph-image") return true;
   return false;
 }
 
