@@ -208,6 +208,21 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
           variant: result.passed ? "success" : "warning",
         });
 
+        // Roadmap item 5 — variable XP: the tier/crit/milestone bonus
+        // is a separate beat from the pass/fail verdict, so it reads as
+        // "extra" rather than getting buried in the feedback text.
+        if (result.passed && (result.xpTier || result.bonusXpAwarded > 0)) {
+          const tierLabel =
+            result.xpTier === "gold" ? "🥇 Gold" : result.xpTier === "silver" ? "🥈 Silver" : "🥉 Bronze";
+          const bonusLine =
+            result.bonusXpAwarded > 0 ? ` +${result.bonusXpAwarded} bonus XP` : "";
+          toast({
+            title: result.wasCriticalHit ? "✨ Critical success!" : tierLabel,
+            description: `${tierLabel} performance.${bonusLine}`,
+            variant: "success",
+          });
+        }
+
         // A silent streak-save or restore reads as a bug if it isn't
         // explained — surface it explicitly rather than let the number
         // just change unexpectedly.

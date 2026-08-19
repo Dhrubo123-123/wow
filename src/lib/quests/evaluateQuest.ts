@@ -3,6 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import { getAIProvider, AIProviderError } from "@/lib/ai";
 import { awardXP, updateSkillXP, updateStreak, unlockAchievement } from "@/lib/progression";
+import {
+  xpTierForScore,
+  tierBonusXp,
+  isCriticalHit,
+  CRIT_BONUS_XP,
+  streakMilestoneBonusXp,
+} from "@/lib/progression/variableXp";
 import { logError } from "@/lib/observability/logger";
 import { logEvent } from "@/lib/events/log";
 import { EVENT } from "@/lib/events/names";
@@ -22,6 +29,10 @@ export interface QuestEvaluationResult {
   // something the GM actually saw/read, not generic praise.
   observedDetail: string;
   xpAwarded: number;
+  // Roadmap item 5 — variable XP breakdown, all computed server-side.
+  xpTier: "bronze" | "silver" | "gold" | null;
+  bonusXpAwarded: number;
+  wasCriticalHit: boolean;
   leveledUp: boolean;
   newLevel: number | null;
   streak: Awaited<ReturnType<typeof updateStreak>> | null;
@@ -113,13 +124,16 @@ export async function runQuestEvaluation(
 
   const clampedXp = Math.max(0, Math.min(evaluation.xp_awarded, quest.xp_reward));
   const clampedSkillXp = Math.max(0, Math.min(evaluation.skill_xp_awarded, MAX_SKILL_XP));
+  // Roadmap item 5 — tier is a function of the AI's score, computed
+  // server-side; only meaningful (and only ever paid out) on a pass.
+  const tier = evaluation.passed ? xpTierForScore(evaluation.score) : null;
 
   await logEvent(admin, userId, EVENT.EVALUATION_RETURNED, {
     questId,
     passed: evaluation.passed,
     score: evaluation.score,
     xpAwarded: clampedXp,
-    tier: null as "bronze" | "silver" | "gold" | null,
+    tier,
   });
 
   const { error: evalInsertError } = await admin.from("ai_evaluations").insert({
@@ -151,6 +165,8 @@ export async function runQuestEvaluation(
   let leveledUp = false;
   let newLevel: number | null = null;
   let streak: Awaited<ReturnType<typeof updateStreak>> | null = null;
+  let bonusXp = 0;
+  let wasCriticalHit = false;
   const newAchievements: { key: string; name: string; description: string | null }[] = [];
 
   async function grant(key: string) {
@@ -201,6 +217,36 @@ export async function runQuestEvaluation(
       await logEvent(admin, userId, EVENT.STREAK_EXTENDED, { currentStreak: streak.currentStreak });
     }
 
+    // Roadmap item 5 — variable XP bonus, entirely server-computed and
+    // layered on top of the already-clamped base award (never raises
+    // it). Tier/crit only apply when there was a base award to scale;
+    // the streak milestone bonus is independent — it pays out for
+    // hitting a streak length, not for evaluation quality.
+    if (tier && clampedXp > 0) {
+      bonusXp += tierBonusXp(clampedXp, tier);
+      if (isCriticalHit(Math.random())) {
+        bonusXp += CRIT_BONUS_XP;
+        wasCriticalHit = true;
+      }
+    }
+    bonusXp += streakMilestoneBonusXp(streak.currentStreak);
+
+    if (bonusXp > 0) {
+      await awardXP(admin, {
+        userId,
+        amount: bonusXp,
+        sourceType: "adjustment",
+        sourceId: `${quest.id}_bonus`,
+      });
+      await logEvent(admin, userId, EVENT.XP_BONUS_AWARDED, {
+        questId,
+        tier,
+        bonusXp,
+        wasCriticalHit,
+        currentStreak: streak.currentStreak,
+      });
+    }
+
     await grant("FIRST_WIN");
 
     if (quest.goal_id && goal?.title) {
@@ -219,6 +265,9 @@ export async function runQuestEvaluation(
     improvements: evaluation.improvements,
     observedDetail: evaluation.observed_detail,
     xpAwarded: clampedXp,
+    xpTier: tier,
+    bonusXpAwarded: bonusXp,
+    wasCriticalHit,
     leveledUp,
     newLevel,
     streak,

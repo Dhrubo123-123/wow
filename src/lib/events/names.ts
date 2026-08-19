@@ -22,6 +22,9 @@ export const EVENT = {
   AI_CALL_LOGGED: "ai_call_logged",
   // Roadmap item 3 — "Today" screen quest lifecycle.
   QUEST_EXPIRED: "quest_expired",
+  // Roadmap item 5 — variable XP: tier/crit/milestone bonus on top of
+  // the base evaluation award, logged separately from it.
+  XP_BONUS_AWARDED: "xp_bonus_awarded",
   PAYWALL_SHOWN: "paywall_shown",
   PAYWALL_CLICKED: "paywall_clicked",
   PAYMENT_CAPTURED: "payment_captured",
