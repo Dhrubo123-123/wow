@@ -133,7 +133,7 @@ export function LogoWordmark({ className }: { className?: string }) {
   return (
     <div className={`inline-flex flex-col items-center ${className ?? ""}`}>
       <span
-        className="text-4xl font-black tracking-[0.18em] sm:text-5xl"
+        className="font-display text-4xl font-black tracking-[0.18em] sm:text-5xl"
         style={{
           backgroundImage: `linear-gradient(180deg, ${GOLD_LIGHT} 0%, ${GOLD_MID} 45%, ${GOLD_DEEP} 100%)`,
           WebkitBackgroundClip: "text",

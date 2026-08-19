@@ -2,6 +2,49 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Interactive voice mentor + display typography + a real perf fix
+
+Two separate asks landed together: the AI Mentor needed to actually
+listen, not just speak; and the UI still read as "basic fonts" with
+reported lag despite the previous motion pass.
+
+- **Voice input, not just voice output**: new
+  `lib/audio/useSpeechRecognition.ts` wraps the Web Speech API
+  (feature-detected — Chrome/Edge/Safari support it, Firefox doesn't,
+  same "never assume a browser API exists" rule as camera/motion).
+  `MentorChat` now has a mic button: tap it, ask out loud, the
+  transcribed question sends automatically, and — when sound is
+  enabled — the mentor's reply is spoken back automatically too. That
+  closes the loop into an actual two-way conversation instead of typed
+  text with narration bolted on afterward. Text input still works
+  exactly as before for anyone without mic support.
+- **Real performance bug found and fixed**: the primary-button glow
+  from the previous pass animated `box-shadow` directly, which forces
+  a full repaint every frame — not compositor-only. Running that
+  alongside the ember particles, shimmer sweep, and card animations was
+  a plausible real cause of reported lag, not just a vibe complaint.
+  Rewrote it to animate a separate layer's `opacity`/`transform`
+  instead — same visual pulse, entirely GPU-compositable.
+- **Display typography**: added Cinzel (an engraved, seal-like serif
+  that matches the emblem's "old coin" styling) as a heading-only font
+  via `next/font/google`, applied globally to `h1`–`h4` plus the Logo
+  wordmark. Body copy stays on Geist Sans for small-size readability —
+  this is a heading accent, not a full font swap, so it doesn't fight
+  legibility anywhere text-dense (chat bubbles, quest instructions).
+  This is the direct fix for "basic fonts."
+- **Narration pacing**: `speak()`'s rate dropped from 0.98 to 0.88 —
+  slower reads as a patient guide, not a rushed notification.
+- Honest scope note (told to the user directly, repeating here for the
+  record): true cinematic production — hand-animated sequences,
+  professional voice acting, a score — is out of reach for hand-written
+  CSS/SVG in a codebase like this. What shipped here is the real,
+  achievable version: distinctive typography, GPU-friendly motion, and
+  an actually-interactive voice loop.
+- `npm run lint`, `tsc --noEmit`, `npm run build`, and `npm test`
+  (24/24) all pass. Verified live: mic button renders and is
+  feature-detected correctly in a Chromium-based browser, no console
+  errors, Cinzel renders in both the wordmark and page headings.
+
 ## Post-launch — "It still looks ordinary": ambient motion pass
 
 User feedback after the rebrand, backed by real screenshots of the live

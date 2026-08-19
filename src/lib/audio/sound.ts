@@ -128,7 +128,10 @@ export function speak(text: string, enabled: boolean, lang: VoiceLang = "en") {
   const voice = pickVoice(lang);
   if (voice) utterance.voice = voice;
   utterance.lang = LANG_TAGS[lang];
-  utterance.rate = 0.98;
+  // Slower than the default (1.0) on purpose — a guide reading each
+  // step a little unhurried reads as "patient", not "sluggish", the
+  // same way a good narrator paces themselves below conversational speed.
+  utterance.rate = 0.88;
   utterance.pitch = 1.05;
   utterance.volume = 0.9;
   window.speechSynthesis.speak(utterance);
