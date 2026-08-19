@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Local dev-tool config (Claude Code browser preview)
 .claude/
+
+__pycache__/
+*.pyc
