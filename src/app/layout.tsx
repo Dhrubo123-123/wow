@@ -27,10 +27,17 @@ const cinzel = Cinzel({
   weight: ["600", "700", "900"],
 });
 
+const SITE_URL = "https://emberss.shop";
+const SITE_DESCRIPTION =
+  "EMBER turns your real-life goals into AI-generated quests. Submit evidence, get evaluated by an AI Game Master, earn XP, level up, and unlock skills — a real-life RPG for cooking, fitness, learning, and more.";
+
 export const metadata: Metadata = {
-  title: "EMBER — Turn Your Real Life Into Quests",
-  description:
-    "EMBER is an AI-powered real-life RPG. Turn real-world goals into AI-generated quests, submit evidence, and level up.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "EMBER — Turn Your Real Life Into Quests",
+    template: "%s · EMBER",
+  },
+  description: SITE_DESCRIPTION,
   applicationName: "EMBER",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -47,6 +54,51 @@ export const metadata: Metadata = {
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // Explicit, not assumed — the default without this is "index, follow",
+  // but stating it plainly (plus the granular googleBot block) means a
+  // crawler never has to guess intent from an unauthenticated app that
+  // gates most of its routes behind login.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  alternates: {
+    canonical: "/",
+  },
+  keywords: [
+    "real life RPG",
+    "AI quests",
+    "gamified self improvement",
+    "habit tracker RPG",
+    "AI goal tracker",
+    "AI life coach app",
+    "level up real life",
+    "quest based productivity",
+  ],
+  authors: [{ name: "EMBER" }],
+  category: "productivity",
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "EMBER",
+    title: "EMBER — Turn Your Real Life Into Quests",
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "EMBER — AI-Powered Real-Life RPG" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EMBER — Turn Your Real Life Into Quests",
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
   },
 };
 
