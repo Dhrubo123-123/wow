@@ -14,6 +14,7 @@ import {
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { SoundToggle } from "@/components/settings/SoundToggle";
 import { xpForNextLevel } from "@/lib/progression/levels";
+import { getFlameTier } from "@/lib/progression/flame";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -49,6 +50,7 @@ export default async function ProfilePage() {
 
   const displayName = profile.name || user.email || "Adventurer";
   const { xpIntoLevel, xpNeeded } = xpForNextLevel(profile.xp, profile.level);
+  const flame = getFlameTier(streak?.current_streak ?? 0);
 
   return (
     <div className="space-y-4 stagger-children p-4">
@@ -74,9 +76,9 @@ export default async function ProfilePage() {
             {profile.preferred_language && profile.preferred_language !== "en" && (
               <Badge>{profile.preferred_language.toUpperCase()}</Badge>
             )}
-            <Badge variant="accent">
-              <span className="animate-flame-flicker" aria-hidden="true">
-                🔥
+            <Badge variant="accent" title={flame.label}>
+              <span className={flame.className} aria-hidden="true">
+                {flame.emoji}
               </span>{" "}
               {streak?.current_streak ?? 0} day streak
             </Badge>

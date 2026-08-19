@@ -15,6 +15,7 @@ import {
   ProgressBar,
 } from "@/components/ui";
 import { xpForNextLevel } from "@/lib/progression/levels";
+import { getFlameTier } from "@/lib/progression/flame";
 import { QUEST_DIFFICULTY_LABELS, type QuestDifficulty } from "@/lib/quests";
 import { DashboardWelcomeVoice } from "@/components/audio/DashboardWelcomeVoice";
 
@@ -82,6 +83,7 @@ export default async function DashboardPage() {
 
   const displayName = profile.name || user.email || "Adventurer";
   const { xpIntoLevel, xpNeeded } = xpForNextLevel(profile.xp, profile.level);
+  const flame = getFlameTier(streak?.current_streak ?? 0);
   const aiPlan = (goal?.ai_plan ?? null) as GoalAIPlan | null;
   const nextMilestone = aiPlan?.milestones?.[0] ?? null;
 
@@ -107,9 +109,9 @@ export default async function DashboardPage() {
             showValue
           />
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="accent">
-              <span className="animate-flame-flicker" aria-hidden="true">
-                🔥
+            <Badge variant="accent" title={flame.label}>
+              <span className={flame.className} aria-hidden="true">
+                {flame.emoji}
               </span>{" "}
               {streak?.current_streak ?? 0} day streak
             </Badge>
@@ -149,7 +151,12 @@ export default async function DashboardPage() {
                 </div>
               </div>
               <Link href={`/quests/${currentQuest.id}`} className="block">
-                <Button fullWidth>Start Quest</Button>
+                <Button fullWidth>
+                  {/* Roadmap item 4 — commitment framing scales with the
+                      streak: "start" reads as low-stakes, "keep alive"
+                      names what's actually on the line once one exists. */}
+                  {(streak?.current_streak ?? 0) > 0 ? "Keep the streak alive" : "Commit to today's quest"}
+                </Button>
               </Link>
             </>
           ) : (

@@ -320,6 +320,12 @@ export function DayOneFlow() {
           <p className="text-sm text-muted">
             We&apos;ll unlock your next quest at the same time every day — the routine is the point.
           </p>
+          {/* Roadmap item 4 — the schedule step IS the commitment; the
+              copy should name that instead of reading like a generic
+              form field. */}
+          <p className="text-xs font-medium text-accent">
+            Pick a time and we&apos;ll hold you to it, gently.
+          </p>
           <div className="grid grid-cols-1 gap-2">
             {TIME_OPTIONS.map((t) => (
               <button
@@ -338,7 +344,7 @@ export function DayOneFlow() {
             ))}
           </div>
           <Button fullWidth loading={loading} onClick={saveSchedule}>
-            Continue
+            Commit to this time
           </Button>
         </div>
       )}
