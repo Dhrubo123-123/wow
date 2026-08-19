@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { expireEarnbackIfPast } from "@/lib/progression";
+import { expireEarnbackIfPast, getStreakRisk } from "@/lib/progression";
 import {
   Avatar,
   Badge,
@@ -51,7 +51,7 @@ export default async function DashboardPage() {
   // a schedule instead). Never let this delay or fail the page render.
   void expireEarnbackIfPast(createAdminClient(), user.id).catch(() => {});
 
-  const [{ data: goal }, { data: quests }, { data: streak }] = await Promise.all([
+  const [{ data: goal }, { data: quests }, { data: streak }, streakRisk] = await Promise.all([
     profile.current_goal_id
       ? supabase
           .from("goals")
@@ -70,6 +70,10 @@ export default async function DashboardPage() {
       .select("current_streak, freezes_available")
       .eq("user_id", user.id)
       .single(),
+    // Predicted, not retroactive — this is what makes a freeze visible
+    // on the Today screen the same day it would cover a gap, instead
+    // of only surfacing as a toast once a later quest is completed.
+    getStreakRisk(supabase, user.id),
   ]);
 
   const currentQuest = quests
@@ -115,6 +119,15 @@ export default async function DashboardPage() {
               </Badge>
             )}
           </div>
+          {streakRisk.level !== "safe" && (
+            <p
+              className={`text-xs ${
+                streakRisk.level === "at-risk" ? "text-danger" : "text-accent"
+              }`}
+            >
+              {streakRisk.message}
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -1,12 +1,36 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { nextStreakState } from "./streakLogic";
+import { nextStreakState, describeStreakRisk, type StreakRecord } from "./streakLogic";
 import { logEvent } from "@/lib/events/log";
 import { EVENT } from "@/lib/events/names";
 
 function todayUTC(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+async function loadStreakRecord(
+  admin: SupabaseClient<Database>,
+  userId: string,
+): Promise<StreakRecord | null> {
+  const { data } = await admin
+    .from("streaks")
+    .select(
+      "current_streak, longest_streak, last_activity_date, freezes_available, last_streak_before_break, streak_break_expires_at, earnback_redemptions",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!data) return null;
+  return {
+    currentStreak: data.current_streak,
+    longestStreak: data.longest_streak,
+    lastActivityDate: data.last_activity_date,
+    freezesAvailable: data.freezes_available,
+    lastStreakBeforeBreak: data.last_streak_before_break,
+    streakBreakExpiresAt: data.streak_break_expires_at,
+    earnbackRedemptions: data.earnback_redemptions,
+  };
 }
 
 /**
@@ -22,28 +46,8 @@ function todayUTC(): string {
  */
 export async function updateStreak(admin: SupabaseClient<Database>, userId: string) {
   const today = todayUTC();
-
-  const { data: existing } = await admin
-    .from("streaks")
-    .select(
-      "current_streak, longest_streak, last_activity_date, freezes_available, last_streak_before_break, streak_break_expires_at",
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  const result = nextStreakState(
-    existing
-      ? {
-          currentStreak: existing.current_streak,
-          longestStreak: existing.longest_streak,
-          lastActivityDate: existing.last_activity_date,
-          freezesAvailable: existing.freezes_available,
-          lastStreakBeforeBreak: existing.last_streak_before_break,
-          streakBreakExpiresAt: existing.streak_break_expires_at,
-        }
-      : null,
-    today,
-  );
+  const existing = await loadStreakRecord(admin, userId);
+  const result = nextStreakState(existing, today);
 
   await admin.from("streaks").upsert(
     {
@@ -54,6 +58,7 @@ export async function updateStreak(admin: SupabaseClient<Database>, userId: stri
       freezes_available: result.freezesAvailable,
       last_streak_before_break: result.lastStreakBeforeBreak,
       streak_break_expires_at: result.streakBreakExpiresAt,
+      earnback_redemptions: result.earnbackRedemptions,
     },
     { onConflict: "user_id" },
   );
@@ -64,10 +69,12 @@ export async function updateStreak(admin: SupabaseClient<Database>, userId: stri
     freezesAvailable: result.freezesAvailable,
     freezeUsed: result.freezeUsed,
     streakEarnedBack: result.streakEarnedBack,
-    // Non-null here means a *new* earn-back window just opened this
-    // update — distinct from streakEarnedBack (which means an
-    // existing window was just successfully redeemed).
-    earnbackWindowOpened: result.lastStreakBeforeBreak !== null,
+    // True only the update a *new* earn-back window opens — distinct
+    // from "a window is open and this was a mid-progress redemption",
+    // which would otherwise re-fire "started" on every partial
+    // redemption too.
+    earnbackWindowJustOpened:
+      (existing?.lastStreakBeforeBreak ?? null) === null && result.lastStreakBeforeBreak !== null,
   };
 }
 
@@ -94,8 +101,19 @@ export async function expireEarnbackIfPast(admin: SupabaseClient<Database>, user
 
   await admin
     .from("streaks")
-    .update({ last_streak_before_break: null, streak_break_expires_at: null })
+    .update({ last_streak_before_break: null, streak_break_expires_at: null, earnback_redemptions: 0 })
     .eq("user_id", userId);
 
   await logEvent(admin, userId, EVENT.EARNBACK_EXPIRED, {});
+}
+
+/**
+ * Read-only risk prediction for the Today screen (and, later, any
+ * reminder) — never mutates anything. See streakLogic.ts's
+ * describeStreakRisk for the actual rule.
+ */
+export async function getStreakRisk(admin: SupabaseClient<Database>, userId: string) {
+  const today = todayUTC();
+  const existing = await loadStreakRecord(admin, userId);
+  return describeStreakRisk(existing, today);
 }

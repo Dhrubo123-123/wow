@@ -272,6 +272,7 @@ export interface Database {
           freezes_available: number;
           last_streak_before_break: number | null;
           streak_break_expires_at: string | null;
+          earnback_redemptions: number;
         },
         {
           user_id: string;
@@ -281,6 +282,7 @@ export interface Database {
           freezes_available?: number;
           last_streak_before_break?: number | null;
           streak_break_expires_at?: string | null;
+          earnback_redemptions?: number;
         }
       >;
       ai_evaluations: Table<

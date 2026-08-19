@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextStreakState, type StreakRecord } from "./streakLogic";
+import { nextStreakState, describeStreakRisk, type StreakRecord } from "./streakLogic";
 
 function record(overrides: Partial<StreakRecord>): StreakRecord {
   return {
@@ -9,6 +9,7 @@ function record(overrides: Partial<StreakRecord>): StreakRecord {
     freezesAvailable: 1,
     lastStreakBeforeBreak: null,
     streakBreakExpiresAt: null,
+    earnbackRedemptions: 0,
     ...overrides,
   };
 }
@@ -115,6 +116,7 @@ describe("nextStreakState", () => {
     expect(result.currentStreak).toBe(1);
     expect(result.lastStreakBeforeBreak).toBe(10);
     expect(result.streakBreakExpiresAt).toBe("2026-08-20");
+    expect(result.earnbackRedemptions).toBe(0);
   });
 
   it("does not open an earn-back window for a trivial (1-day) streak breaking", () => {
@@ -131,20 +133,39 @@ describe("nextStreakState", () => {
     expect(result.streakBreakExpiresAt).toBeNull();
   });
 
-  it("restores a broken streak (+1) when completed within the earn-back window", () => {
-    const result = nextStreakState(
+  it("requires a SECOND redemption before restoring a broken streak", () => {
+    const first = nextStreakState(
       record({
         currentStreak: 1,
         longestStreak: 10,
-        lastActivityDate: "2026-08-18", // reset day
+        lastActivityDate: "2026-08-18",
         lastStreakBeforeBreak: 10,
         streakBreakExpiresAt: "2026-08-20",
+        earnbackRedemptions: 0,
       }),
       "2026-08-19",
     );
-    expect(result.currentStreak).toBe(11);
-    expect(result.streakEarnedBack).toBe(true);
-    expect(result.lastStreakBeforeBreak).toBeNull();
+    // One redemption isn't enough — no free ride.
+    expect(first.streakEarnedBack).toBe(false);
+    expect(first.currentStreak).toBe(1);
+    expect(first.earnbackRedemptions).toBe(1);
+    expect(first.lastStreakBeforeBreak).toBe(10); // window stays open
+
+    const second = nextStreakState(
+      record({
+        currentStreak: 1,
+        longestStreak: 10,
+        lastActivityDate: "2026-08-19",
+        lastStreakBeforeBreak: first.lastStreakBeforeBreak,
+        streakBreakExpiresAt: first.streakBreakExpiresAt,
+        earnbackRedemptions: first.earnbackRedemptions,
+      }),
+      "2026-08-19", // same day — both quests done in one sitting
+    );
+    expect(second.streakEarnedBack).toBe(true);
+    expect(second.currentStreak).toBe(11);
+    expect(second.lastStreakBeforeBreak).toBeNull();
+    expect(second.earnbackRedemptions).toBe(0);
   });
 
   it("does not restore a broken streak once the earn-back window has expired", () => {
@@ -187,5 +208,68 @@ describe("nextStreakState", () => {
       "2026-08-18",
     );
     expect(result.freezesAvailable).toBe(2);
+  });
+});
+
+describe("describeStreakRisk", () => {
+  it("is safe for a brand-new user", () => {
+    expect(describeStreakRisk(null, "2026-08-18").level).toBe("safe");
+  });
+
+  it("is safe once today's activity is already logged", () => {
+    const risk = describeStreakRisk(
+      record({ currentStreak: 5, lastActivityDate: "2026-08-18" }),
+      "2026-08-18",
+    );
+    expect(risk.level).toBe("safe");
+  });
+
+  it("is safe the normal day after activity, before today's quest is done", () => {
+    const risk = describeStreakRisk(
+      record({ currentStreak: 5, lastActivityDate: "2026-08-17" }),
+      "2026-08-18",
+    );
+    expect(risk.level).toBe("safe");
+  });
+
+  it("shows the freeze-will-cover message when a freeze can bridge today — never a panic message", () => {
+    const risk = describeStreakRisk(
+      record({ currentStreak: 5, lastActivityDate: "2026-08-16", freezesAvailable: 1 }),
+      "2026-08-18",
+    );
+    expect(risk.level).toBe("freeze-will-cover");
+    expect(risk.message).toContain("❄️");
+    expect(risk.message.toLowerCase()).not.toContain("no freeze");
+  });
+
+  it("shows an at-risk message when no freeze is available to cover today", () => {
+    const risk = describeStreakRisk(
+      record({ currentStreak: 5, lastActivityDate: "2026-08-16", freezesAvailable: 0 }),
+      "2026-08-18",
+    );
+    expect(risk.level).toBe("at-risk");
+  });
+
+  it("shows earn-back progress instead of a generic at-risk message when a window is open", () => {
+    const risk = describeStreakRisk(
+      record({
+        currentStreak: 1,
+        lastActivityDate: "2026-08-18",
+        lastStreakBeforeBreak: 10,
+        streakBreakExpiresAt: "2026-08-20",
+        earnbackRedemptions: 0,
+      }),
+      "2026-08-19",
+    );
+    expect(risk.level).toBe("earnback-in-progress");
+    expect(risk.message).toContain("10-day streak");
+  });
+
+  it("is safe once the gap is too large for a freeze to matter (past saving today specifically)", () => {
+    const risk = describeStreakRisk(
+      record({ currentStreak: 5, lastActivityDate: "2026-08-10", freezesAvailable: 1 }),
+      "2026-08-18",
+    );
+    expect(risk.level).toBe("safe");
   });
 });

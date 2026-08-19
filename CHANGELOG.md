@@ -2,6 +2,38 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Roadmap item 1: freeze/earn-back fixes
+
+- **Freeze coverage is now predicted, not discovered retroactively.**
+  New `describeStreakRisk` (pure, tested) reads today's date against
+  the stored streak state and returns one of `safe` /
+  `freeze-will-cover` / `at-risk` / `earnback-in-progress` — shown
+  directly on the dashboard's Today card. Previously a freeze auto-
+  consuming only ever showed up as a toast the next time a quest was
+  completed, which could be days later; now it's visible the same day
+  it matters, before the user does anything.
+- **At-risk messaging reads freeze state first, by construction** — the
+  function checks `freezesAvailable` before ever returning `at-risk`,
+  so a covered day can never produce a panic message. (No push/email
+  reminder system exists yet — that's roadmap item 6 — but this
+  function is what item 6 will call, so the "read freeze state first"
+  rule is already enforced at the source, not per-channel.)
+- **Earn-back now requires two genuine quest completions**, not one —
+  `earnback_redemptions` tracks progress (new `streaks` column);
+  `earnback_succeeded` only logs once both are done. Deliberately
+  *not* a special AI-generated "bonus quest" — any second real
+  completion counts, which stays deterministic, costs no extra AI
+  call, and avoids adding AI-budget load right before roadmap item A
+  (which exists specifically to protect that budget). Flagging this as
+  a scope decision, not an oversight — happy to revisit once item A's
+  quest-caching lands, since a cached "bonus quest" would then be free.
+- 7 new test cases (32 → 39): freeze-covers-today message wording, at-
+  risk-with-no-freeze, earn-back requiring exactly 2 redemptions
+  (partial redemption keeps the window open, same-day double-
+  completion redeems it), earn-back-in-progress messaging, and the
+  existing expiry/replenishment cases carried forward unchanged.
+- `npm run lint`, `npm run build`, `npm test` (39/39) all pass.
+
 ## Post-launch — Roadmap item 0b: richer evaluation_returned event
 
 - `evaluation_returned` now also logs the server-clamped `xpAwarded`

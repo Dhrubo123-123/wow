@@ -213,7 +213,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       await logEvent(admin, userId, EVENT.FREEZE_CONSUMED, { newStreak: streak.currentStreak });
     } else if (streak.streakEarnedBack) {
       await logEvent(admin, userId, EVENT.EARNBACK_SUCCEEDED, { restoredStreak: streak.currentStreak });
-    } else if (streak.earnbackWindowOpened) {
+    } else if (streak.earnbackWindowJustOpened) {
       await logEvent(admin, userId, EVENT.EARNBACK_STARTED, {});
     } else {
       await logEvent(admin, userId, EVENT.STREAK_EXTENDED, { currentStreak: streak.currentStreak });
