@@ -51,3 +51,17 @@ export const DifficultyAdjustmentSchema = z.object({
   reason: z.string().min(1).max(500),
 });
 export type DifficultyAdjustment = z.infer<typeof DifficultyAdjustmentSchema>;
+
+/**
+ * Live AI Coach (post-launch engagement pass) — one verdict on a single
+ * camera frame captured while a quest is in progress. Advisory only:
+ * never touches XP or quest status, so there's no "AI awards unlimited
+ * XP" concern here the way there is for AIEvaluationSchema.
+ */
+export const LiveCoachSchema = z.object({
+  status: z.enum(["good", "warning", "danger"]),
+  // Short and spoken-friendly on purpose — this gets read aloud by TTS,
+  // not displayed as a paragraph.
+  message: z.string().min(1).max(220),
+});
+export type LiveCoachVerdict = z.infer<typeof LiveCoachSchema>;

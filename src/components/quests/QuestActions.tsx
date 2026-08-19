@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, useToast } from "@/components/ui";
 import { CameraCapture } from "@/components/camera/CameraCapture";
+import { LiveCoach } from "@/components/camera/LiveCoach";
 import { useSoundPreference } from "@/lib/audio/useSoundPreference";
 import { narrate } from "@/lib/audio/narration";
 import type { EvidenceType, QuestStatus } from "@/lib/quests";
@@ -246,6 +247,11 @@ export function QuestActions({ questId, userId, status, attemptId, evidenceType 
   if (status === "in_progress") {
     return (
       <form onSubmit={submit} className="space-y-3">
+        {/* "AI has eyes" — optional live coaching while doing the quest,
+            fully separate from the evidence photo below. Never affects
+            what gets submitted. */}
+        <LiveCoach questId={questId} />
+
         {isImageEvidence && !photo && (
           <CameraCapture onCapture={setPhoto} />
         )}

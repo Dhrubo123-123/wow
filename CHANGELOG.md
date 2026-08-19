@@ -2,6 +2,54 @@
 
 All notable changes are grouped by build phase (see ARCHITECTURE.md §9).
 
+## Post-launch — Live AI Coach ("AI has eyes")
+
+A real live-vision coaching feature — not evidence capture. While a
+quest is in progress, an opt-in camera loop periodically sends a frame
+to a vision-capable AI model along with the quest's context, and the
+model speaks a short real-time correction or encouragement (technique,
+form, an ingredient that looks off) — the way a coach standing next to
+someone would, e.g. "you're chopping from the middle — that vegetable
+looks bruised, use the fresh part and start from the side."
+
+- **New AI capability**: `lib/ai/coach.ts` calls Groq's `qwen/qwen3.6-27b`
+  directly (the only vision-capable model across either configured
+  provider — confirmed via docs and live testing; Cerebras's
+  `gpt-oss-120b` has no image input at all). Kept deliberately outside
+  the swappable `AIProvider` abstraction since vision is a genuinely
+  different model capability, not a drop-in replacement for the
+  text-only providers.
+- **Real constraint, not a guess**: direct testing against the live API
+  found (a) the model is a reasoning model by default and silently
+  returns empty content under a modest `max_tokens` unless
+  `reasoning_effort: "none"` is set, and (b) this Groq account's vision
+  model is capped at ~8000 tokens/minute, with each frame costing a
+  fixed ~1850 tokens regardless of resolution (image tiling, not
+  bytes-based). That puts the sustainable ceiling at ~4 requests/minute
+  — `LiveCoach.tsx` polls every 15s (not an arbitrary "feels real-time"
+  number) and the coach API route rate-limits at 8/min per user to
+  match.
+- **New route**: `POST /api/quests/[id]/coach` — authenticated,
+  rate-limited, verifies the quest is the caller's own and `in_progress`
+  before spending a vision call on it. Stateless by design: the frame
+  is analyzed in memory and discarded the instant the request returns —
+  never written to Storage, the DB, or logs, matching the same "camera
+  must never persist" rule as evidence capture. Never touches XP or
+  quest status — purely advisory, so the "AI must not award unlimited
+  XP" constraint doesn't even apply here.
+- **New component**: `LiveCoach.tsx` — explicit opt-in ("Start Live AI
+  Coach"), live preview (reuses the same post-mount stream-attachment
+  fix as `CameraCapture`), a visible remaining-time indicator, a
+  color-coded good/warning/danger banner, spoken feedback through the
+  existing bilingual voice engine, haptic buzz on warning/danger, a
+  hard 6-minute session cap, and a Stop button. Camera stops immediately
+  on stop/unmount — never left running silently.
+- Verified end-to-end against the live dev server and the real Groq API
+  (not mocked): authenticated request → ownership/status check → vision
+  call → schema-validated JSON response, in both English and Hindi.
+  `npm run lint`, `tsc --noEmit`, `npm run build` (20 routes now), and
+  `npm test` (24/24) all pass.
+
 ## Post-launch — Engagement pass (voice, ambient music, camera fix, bigger celebrations)
 
 Follow-up pass after production deployment, in response to feedback that
