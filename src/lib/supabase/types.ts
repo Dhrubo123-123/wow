@@ -60,6 +60,8 @@ export interface Database {
           updated_at: string;
           preferred_quest_time: string | null;
           starter_quest_completed_at: string | null;
+          plan: "trial" | "full";
+          trial_ends_at: string;
         },
         {
           id: string;
@@ -74,6 +76,8 @@ export interface Database {
           onboarding_completed_at?: string | null;
           preferred_quest_time?: string | null;
           starter_quest_completed_at?: string | null;
+          plan?: "trial" | "full";
+          trial_ends_at?: string;
         }
       >;
       goals: Table<

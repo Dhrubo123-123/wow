@@ -13,8 +13,10 @@ import {
 } from "@/components/ui";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { SoundToggle } from "@/components/settings/SoundToggle";
+import { TrialBanner } from "@/components/settings/TrialBanner";
 import { xpForNextLevel } from "@/lib/progression/levels";
 import { getFlameTier } from "@/lib/progression/flame";
+import { getTrialStatus } from "@/lib/trial/entitlements";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -51,6 +53,7 @@ export default async function ProfilePage() {
   const displayName = profile.name || user.email || "Adventurer";
   const { xpIntoLevel, xpNeeded } = xpForNextLevel(profile.xp, profile.level);
   const flame = getFlameTier(streak?.current_streak ?? 0);
+  const trialStatus = getTrialStatus(profile.plan, profile.trial_ends_at, new Date());
 
   return (
     <div className="space-y-4 stagger-children p-4">
@@ -90,6 +93,8 @@ export default async function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <TrialBanner status={trialStatus} />
 
       {goal && (
         <Card>
